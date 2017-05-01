@@ -1,235 +1,321 @@
 "use strict";
 /* globals TTS,$ */
 /* exported setMicInactive,setMicOff,connect,startButton,arrowUp,arrowDown,arrowRight,arrowLeft,stopButton,mute,toggleWakeup,toggleSimulator,toggleUnrecognized,toggleDropdown*/
-document.addEventListener("deviceready", initialize, false) ;
+document.addEventListener("deviceready", initialize, false);
 
-    var connected=false;
-	var recognizing = false;
+var connected=false;
+var recognizing = false;
 //    var recognition;
-	var total_recognized = 0;
+var total_recognized = 0;
 //  var noRestartReco;
-    var startTimestamp;
-	var ros;						// this will be the connection to Ros
-	var topicName = '/cmd_vel';     					// topic name for the UR robots
+var startTimestamp;
+var ros;						// this will be the connection to Ros
+var topicName = '/cmd_vel';     					// topic name for the UR robots
 //	var topicName = '/cmd_vel_mux/input/navi';     		// topic name for the Stage simulator
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
-	var speedFactor = 1.0;								// multiplies or divides speed to go faster or slower
-	var linearSpeed = 0.2, angularSpeed = 0.4;			// initial speed
-	var linearRepeat = 25, angularRepeat = 25;			// number of times to repeat command
-	var repeatInterval = 200;							// wait time between repeats, in ms
-	var stopMotion = true;
-	var robotUrl;
-	var muted = false;
-	var wakeup = ["robot", "loki", "magni"];
-	var useWakeup = false;
-	var showUnrecognized = false;
-	var infoMsg;
-	var useSimulator = false;
-	var mic, micSlash, micBg;
-		
+var speedFactor = 1.0;								// multiplies or divides speed to go faster or slower
+var linearSpeed = 0.2, angularSpeed = 0.4;			// initial speed
+var linearRepeat = 25, angularRepeat = 25;			// number of times to repeat command
+var repeatInterval = 200;							// wait time between repeats, in ms
+var stopMotion = true;
+var robotUrl;
+var muted = false;
+var wakeup = ["robot", "loki", "magni"];
+var useWakeup = false;
+var showUnrecognized = false;
+var infoMsg;
+var useSimulator = false;
+var mic, micSlash, micBg;
+	
 
-	function setMicInactive() {
-		micBg.style.color = "Gray";
-		micSlash.style.display = "none";
+function setMicInactive() {
+	micBg.style.color = "Gray";
+	micSlash.style.display = "none";
+}
+function setMicActive() {
+	micBg.style.color= "#00BBA1"; 	//"#00cc00";    // green
+	micSlash.style.display = "none";
+}
+function setMicOff() {
+	micBg.style.color = "Gray";
+	micSlash.style.display = "inline";
+}
+function addLog(text, textColor) {
+	var table = document.getElementById ("commandLog");
+	var row = table.insertRow(0);
+	var cell1 = row.insertCell(0);
+	if (textColor) {
+		cell1.style.color = "red";
 	}
-	function setMicActive() {
-		micBg.style.color= "#00BBA1"; 	//"#00cc00";    // green
-		micSlash.style.display = "none";
+	cell1.innerHTML = text;
+}
+	/**
+	* Set up GUI elements when the page is loaded.
+	*/
+function initialize() {
+	var temp;
+	micBg = document.getElementById("mic-bg");
+	mic =   document.getElementById("mic");
+	micSlash = document.getElementById("mic-slash");
+	if (localStorage.firstResultOK === undefined) {
+		localStorage.firstResultOK = 0;
 	}
-	function setMicOff() {
-		micBg.style.color = "Gray";
-		micSlash.style.display = "inline";
+	if (localStorage.otherResultOK === undefined) {
+		localStorage.otherResultOK = 0;
 	}
-	function addLog(text, textColor) {
-		var table = document.getElementById ("commandLog");
-		var row = table.insertRow(0);
-		var cell1 = row.insertCell(0);
-		if (textColor) {
-			cell1.style.color = "red";
-		}
-		cell1.innerHTML = text;
-    }
-        /**
-        * Set up GUI elements when the page is loaded.
-        */
-	function initialize() {
-		var temp;
-		micBg = document.getElementById("mic-bg");
-		mic =   document.getElementById("mic");
-		micSlash = document.getElementById("mic-slash");
-		if (localStorage.firstResultOK === undefined) {
-			localStorage.firstResultOK = 0;
-		}
-		if (localStorage.otherResultOK === undefined) {
-			localStorage.otherResultOK = 0;
-		}
-		if (localStorage.robotUrl !== undefined) {
-			temp = localStorage.robotUrl;		// use the last robot address
-		} else {
-			temp = "wss://" + location.hostname + ":9090";  //guess at it
-		}
-		document.getElementById("robotUrlEntry").value = temp;
+	if (localStorage.robotUrl !== undefined) {
+		temp = localStorage.robotUrl;		// use the last robot address
+	} else {
+		temp = "wss://" + location.hostname + ":9090";  //guess at it
+	}
+	document.getElementById("robotUrlEntry").value = temp;
 //		if (window.SpeechSynthesisUtterance === undefined) {
 //			muted = true;
 //		}
-		infoMsg = document.getElementById ("infoMsg");
+	infoMsg = document.getElementById ("infoMsg");
 //		showInfo ("");
 
-		document.getElementById("wakeupButton").innerHTML = "Wakeup word isn't required";
+	document.getElementById("wakeupButton").innerHTML = "Wakeup word isn't required";
 
-		checkPermissions ();
-	
-			//--------------------Permissions-------------------------
-		function checkPermissions() {
-			var permissionRequests = [];
-			cordova.plugins.diagnostic.getPermissionsAuthorizationStatus(function(statuses){
+	checkPermissions ();
+
+		//--------------------Permissions-------------------------
+	function checkPermissions() {
+		var permissionRequests = [];
+		cordova.plugins.diagnostic.getPermissionsAuthorizationStatus(function(statuses){
+			for (var permission in statuses){
+				switch(statuses[permission]){
+					case cordova.plugins.diagnostic.permissionStatus.GRANTED:
+						console.log("Permission previously granted to use " + permission);
+						break;
+					case cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED:
+						permissionRequests.push (permission);
+						console.log("Permission to use "+permission+" has not been requested yet");
+						break;
+					case cordova.plugins.diagnostic.permissionStatus.DENIED:
+						console.log("Permission previously denied to use "+permission+" - will ask again.");
+						permissionRequests.push (permission);
+						break;
+					case cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS:
+						console.log("Permission has been permanently denied to use " + permission);
+						break;
+				}
+			}
+			askPermissions (permissionRequests);
+		},  function (error) {
+				alert (error);
+		},[
+			cordova.plugins.diagnostic.permission.RECORD_AUDIO
+		]);
+	}
+	function askPermissions (permissionRequests) {
+		if (permissionRequests.length > 0) {
+			cordova.plugins.diagnostic.requestRuntimePermissions(function(statuses){
 				for (var permission in statuses){
 					switch(statuses[permission]){
 						case cordova.plugins.diagnostic.permissionStatus.GRANTED:
-							console.log("Permission previously granted to use " + permission);
+							console.log("Permission granted to use "+permission);
 							break;
 						case cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED:
-							permissionRequests.push (permission);
 							console.log("Permission to use "+permission+" has not been requested yet");
 							break;
 						case cordova.plugins.diagnostic.permissionStatus.DENIED:
-							console.log("Permission previously denied to use "+permission+" - will ask again.");
-							permissionRequests.push (permission);
+							console.log("Permission to use "+permission+" denied.");
 							break;
 						case cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS:
-							console.log("Permission has been permanently denied to use " + permission);
+							console.log("Permission permanently denied to use " + permission + "!");
 							break;
 					}
 				}
-				askPermissions (permissionRequests);
-			},  function (error) {
+			}, function (error){
 					alert (error);
-			},[
-				cordova.plugins.diagnostic.permission.RECORD_AUDIO
-			]);
-		}
-		function askPermissions (permissionRequests) {
-			if (permissionRequests.length > 0) {
-				cordova.plugins.diagnostic.requestRuntimePermissions(function(statuses){
-					for (var permission in statuses){
-						switch(statuses[permission]){
-							case cordova.plugins.diagnostic.permissionStatus.GRANTED:
-								console.log("Permission granted to use "+permission);
-								break;
-							case cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED:
-								console.log("Permission to use "+permission+" has not been requested yet");
-								break;
-							case cordova.plugins.diagnostic.permissionStatus.DENIED:
-								console.log("Permission to use "+permission+" denied.");
-								break;
-							case cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS:
-								console.log("Permission permanently denied to use " + permission + "!");
-								break;
-						}
-					}
-				}, function (error){
-						alert (error);
-				},
-				permissionRequests);
-			} 
-		}
-	}	
+			},
+			permissionRequests);
+		} 
+	}
+}	
 
 
-	function say (words) {
-		var wasRecognizing = false;
+function say (words) {
+	var wasRecognizing = false;
 //		var stowabool;
-		if (muted === false) {
+	if (muted === false) {
 //			stowabool = noRestartReco;
-			if (recognizing) { 
-				wasRecognizing = true;
+		if (recognizing) { 
+			wasRecognizing = true;
 //				noRestartReco = true;   //test
-				//recognition.stop (); 
-			}
-			TTS.speak (words, function () {
-				//if (wasRecognizing) { 
-					//recognition.start ();
-				//}
+			//recognition.stop (); 
+		}
+		TTS.speak (words, function () {
+			//if (wasRecognizing) { 
+				//recognition.start ();
+			//}
 //				noRestartReco = stowabool;
-				console.log ('TTS success');
-			}, function (reason) {
-				console.log ("TTS failed, " + reason);
-			});
-			
-			/*-------------------
-			var u = new SpeechSynthesisUtterance();
-			u.text = words;
-			u.lang = 'en-US';
-			u.rate = 1.1;
-			u.pitch = 1.0;
-			u.default = true;
-			u.localService = true; 
-			u.onend = function(event) { 
-				if (wasRecognizing) { 
-					//recognition.start ();
-				}
-				noRestartReco = stowabool;
+//			console.log ('TTS success');
+		}, function (reason) {
+			console.log ("TTS failed, " + reason);
+		});
+		
+		/*-------------------
+		var u = new SpeechSynthesisUtterance();
+		u.text = words;
+		u.lang = 'en-US';
+		u.rate = 1.1;
+		u.pitch = 1.0;
+		u.default = true;
+		u.localService = true; 
+		u.onend = function(event) { 
+			if (wasRecognizing) { 
+				//recognition.start ();
 			}
-			speechSynthesis.speak(u);---------*/
+			noRestartReco = stowabool;
+		}
+		speechSynthesis.speak(u);---------*/
+	}
+}
+
+function rosConnect(robotUrl) {
+	ros = new ROSLIB.Ros({						// Connecting to ROS.
+		url: robotUrl 							
+	});
+//	ros.socket.addEventListener("onopen", onConnection());
+//	ros.socket.addEventListener("onerror", onError());
+//	ros.socket.addEventListener("onclose", onClose());
+	
+	ros.on('connection', function() {
+	
+		var connectButton;
+			console.log ('Connected to websocket server.');
+			localStorage.robotUrl = robotUrl;
+			connectButton = document.getElementById("connectButton");
+			connectButton.innerHTML = "Disconnect";
+			connectButton.style.background="#00cc00";    		// green
+			say ('connected');
+			connected = true;
+		});
+		
+		ros.on('error', function(error) {
+		console.log (error);
+		 say ('Darn. We failed to connect.');
+		 //none of the following work... 
+		 //alert (error.stack);
+		 //alert (error.message);
+		 //alert (JSON.stringify(error));
+		 bootbox.alert ('Error connecting to websocket server. ' + error);
+	});
+
+	ros.on('close', function() {
+	var connectButton;	
+		if (connected) {			// throw away a second call
+			connected = false;
+			connectButton = document.getElementById("connectButton");
+			connectButton.style.background = "#006dcc";    
+			connectButton.innerHTML = "Connect";
+			say ('connection closed');   
+			console.log('Connection to websocket server closed.');
+		}
+	});
+}
+
+function connect () {
+	var connectButton, locaddr, prefix, port;
+	if (connected) {			// disconnect
+		ros.close();
+	} else {
+		robotUrl = document.getElementById("robotUrlEntry").value.trim();
+		if (robotUrl === '') {
+			bootbox.alert ("Please supply the robot's URL and port");
+			return;
+		} 
+		//robotUrl = "ws://10.0.0.21:9090"		// testing
+		//robotUrl = "ws://george.local:9090"	//testing
+		robotUrl = robotUrl.replace("https:", "wss:");
+		robotUrl = robotUrl.replace("http:", "ws:");
+		if ((robotUrl.slice (0,5) != "wss://") && (robotUrl.slice (0,4) != "ws://") &&
+				(robotUrl.charAt(robotUrl.length - 5) != ":")) {
+			bootbox.alert 
+				("The robot's URL should begin with http, https, ws, or wss, " + 
+					"and end with a port number, like ':9090'.");
+			return;
+		}
+		locaddr = robotUrl.substr(0, robotUrl.length-5);		// get rid of port
+		port = robotUrl.substr(robotUrl.length-5, 5);
+		if (locaddr.startsWith ("ws://")) {
+			locaddr = locaddr.replace ("ws://", "");
+			prefix = "ws://";
+		} else if (locaddr.startsWith ("wss://")) {
+			locaddr = locaddr.replace ("wss://", "");
+			prefix = "wss://";
+		}
+		if (locaddr.endsWith (".local")) {
+			connectLocal (locaddr);
+		} else {
+			console.log ("connecting to IP " + robotUrl);
+			rosConnect (robotUrl);
 		}
 	}
-
-	function connect () {
-		var connectButton;
-		if (connected) {			// disconnect
-			ros.close();
-		} else {
-			robotUrl = document.getElementById("robotUrlEntry").value.trim();
-			if (robotUrl === '') {
-				bootbox.alert ("Please supply the robot's URL and port");
-				return;
-			}
-			robotUrl = robotUrl.replace("https:", "wss:");
-			robotUrl = robotUrl.replace("http:", "ws:");
-			if ((robotUrl.slice (0,5) != "wss://") && (robotUrl.slice (0,4) != "ws://") &&
-					(robotUrl.charAt(robotUrl.length - 5) != ":")) {
-				bootbox.alert 
-					("The robot's URL should begin with http, https, ws, or wss, " + 
-						"and end with a port number, like ':9090'.");
-				return;
-			}
-			ros = new ROSLIB.Ros({						// Connecting to ROS.
-				url: robotUrl 							
-			});
-		}	
 	
-		ros.on('connection', function() {
-				console.log ('Connected to websocket server.');
-				localStorage.robotUrl = robotUrl;
-				connectButton = document.getElementById("connectButton");
-				connectButton.innerHTML = "Disconnect";
-				connectButton.style.background="#00cc00";    		// green
-				say ('connected');
-				connected = true;
-			});
-
-		ros.on('error', function(error) {
-			 console.log (error);
-			 say ('Darn. We failed to connect.');
-			 //none of the following work... 
-			 //alert (error.stack);
-			 //alert (error.message);
-			 //alert (JSON.stringify(error));
-			 bootbox.alert ('Error connecting to websocket server. ' + error);
-		});
-
-		ros.on('close', function() {
-			if (connected) {			// throw away a second call
-				connected = false;
-				connectButton = document.getElementById("connectButton");
-				connectButton.style.background = "#006dcc";    
-				connectButton.innerHTML = "Connect";
-				say ('connection closed');   
-				console.log('Connection to websocket server closed.');
+	function connectLocal (localName) {
+		console.log ("Find address for " + localName ); 
+		var host = localName;
+		var multicastIP = "224.0.0.251";
+		var multicastPort = "5353";
+		var address = "";
+		multicastDNS.query (host, multicastIP, multicastPort,  function (result) { 
+			address = prefix + result + port;
+			robotUrl = address;
+			console.log ("local address found, connecting to " + address);
+			rosConnect (address);
+			},
+			function (reason) {
+				console.log ("Zeroconf error: " + reason);
 			}
-		});
-
+		);
+		// if the local name doesn't exist there will not be a response, so we need to time out
+		setTimeout (function(){
+			if ((address == "") || (address == undefined)) {
+				say (host + " was not found");
+			}
+		}, 2000); 
 	}
+}
+/*
+//	ros.on('connection', function() {
+	function onConnection () {
+		var connectButton;
+			console.log ('Connected to websocket server.');
+			localStorage.robotUrl = robotUrl;
+			connectButton = document.getElementById("connectButton");
+			connectButton.innerHTML = "Disconnect";
+			connectButton.style.background="#00cc00";    		// green
+			say ('connected');
+			connected = true;
+		}
+
+//	ros.on('error', function(error) {
+		function onError (error) {
+		console.log (error);
+		 say ('Darn. We failed to connect.');
+		 //none of the following work... 
+		 //alert (error.stack);
+		 //alert (error.message);
+		 //alert (JSON.stringify(error));
+		 bootbox.alert ('Error connecting to websocket server. ' + error);
+	}
+
+//	ros.on('close', function() {
+	function onClose () {	
+		var connectButton;	
+		if (connected) {			// throw away a second call
+			connected = false;
+			connectButton = document.getElementById("connectButton");
+			connectButton.style.background = "#006dcc";    
+			connectButton.innerHTML = "Connect";
+			say ('connection closed');   
+			console.log('Connection to websocket server closed.');
+		}
+	}
+*/
 
 function startRecognition () {
 		

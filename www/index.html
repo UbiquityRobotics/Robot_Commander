@@ -52,7 +52,6 @@
 	<br><br>
 	<h1 id="cmdr" style="margin-top:20px; font-weight:bold">Robot Commander</h1>
 	<br><br>
-	
 
 	<div class="container-fluid">
 		<form role="form" class="form-horizontal" autocomplete="on" onsubmit="connect()">
@@ -60,7 +59,7 @@
 		    	<label for="robotUrlEntry" class="control-label col-xs-2" style="font-size:16px">Robot URL:</label>
 		    	<div class="col-xs-7">
 		        	<input type="url" name="url" id="robotUrlEntry" class="form-control" 
-						placeholder="https://"  />
+						style="font-size:14px; font-weight:bold" placeholder="https://"  />
 		    	</div>
 				<div class="col-xs-3">
 					<button type="button" id="connectButton" class="btn btn-primary " style="margin-right:15px" onclick="connect()">
@@ -69,7 +68,6 @@
 			</div>
 		</form>
 	</div>
-
 
  <!--   <div id="speed-label"></div>
 		<div id="speed-slider"></div>  -->
@@ -196,12 +194,12 @@
     </div>
 
 	
-<!-- Extra button for testing stuff 
+<!-- Extra button for testing stuff -->
 	<div class="col-xs-3">
 		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="paramdump ()">
 			<strong>Test Paramdump</strong></button>
 	</div>
--->
+
 <!------------
 					<p>Note: To test using the turtle simulator, change the variable topicName to '/turtle1/cmd_vel'. Run the following commands in the terminal, then refresh this page.</p>
 					<ol>

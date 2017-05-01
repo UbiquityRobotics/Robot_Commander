@@ -1,0 +1,9 @@
+<launch>
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
+  </include>
+
+  <include file="$(find turtlebot_stage)/launch/turtlebot_in_stage.launch" > 
+  </include>
+
+  <node name="tf2_web_republisheri" pkg="tf2_web_republisher" type="tf2_web_republisher" />
+</launch>
