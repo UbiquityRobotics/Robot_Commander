@@ -3,6 +3,7 @@
 /* exported setMicInactive,setMicOff,connect,startButton,arrowUp,arrowDown,arrowRight,arrowLeft,stopButton,mute,toggleWakeup,toggleSimulator,toggleUnrecognized,toggleDropdown*/
 document.addEventListener("deviceready", initialize, false);
 
+
 var connected=false;
 var recognizing = false;
 //    var recognition;
@@ -14,7 +15,7 @@ var topicName = '/cmd_vel';     					// topic name for the UR robots
 //	var topicName = '/cmd_vel_mux/input/navi';     		// topic name for the Stage simulator
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
 var speedFactor = 1.0;								// multiplies or divides speed to go faster or slower
-var linearSpeed = 0.2, angularSpeed = 0.4;			// initial speed
+var linearSpeed = 0.2, angularSpeed = 1.0;			// initial speed
 var linearRepeat = 25, angularRepeat = 25;			// number of times to repeat command
 var repeatInterval = 200;							// wait time between repeats, in ms
 var stopMotion = true;
@@ -38,7 +39,7 @@ function setMicActive() {
 }
 function setMicOff() {
 	micBg.style.color = "Gray";
-	micSlash.style.display = "inline";
+		micSlash.style.display = "inline";
 }
 function addLog(text, textColor) {
 	var table = document.getElementById ("commandLog");
@@ -178,23 +179,19 @@ function rosConnect(robotUrl) {
 	ros = new ROSLIB.Ros({						// Connecting to ROS.
 		url: robotUrl 							
 	});
-//	ros.socket.addEventListener("onopen", onConnection());
-//	ros.socket.addEventListener("onerror", onError());
-//	ros.socket.addEventListener("onclose", onClose());
 	
 	ros.on('connection', function() {
-	
 		var connectButton;
-			console.log ('Connected to websocket server.');
-			localStorage.robotUrl = robotUrl;
-			connectButton = document.getElementById("connectButton");
-			connectButton.innerHTML = "Disconnect";
-			connectButton.style.background="#00cc00";    		// green
-			say ('connected');
-			connected = true;
-		});
+		console.log ('Connected to websocket server.');
+		localStorage.robotUrl = robotUrl;
+		connectButton = document.getElementById("connectButton");
+		connectButton.innerHTML = "Disconnect";
+		connectButton.style.background="#00cc00";    		// green
+		say ('connected');
+		connected = true;
+	});
 		
-		ros.on('error', function(error) {
+	ros.on('error', function(error) {
 		console.log (error);
 		 say ('Darn. We failed to connect.');
 		 //none of the following work... 
@@ -205,7 +202,7 @@ function rosConnect(robotUrl) {
 	});
 
 	ros.on('close', function() {
-	var connectButton;	
+		var connectButton;	
 		if (connected) {			// throw away a second call
 			connected = false;
 			connectButton = document.getElementById("connectButton");
@@ -227,8 +224,8 @@ function connect () {
 			bootbox.alert ("Please supply the robot's URL and port");
 			return;
 		} 
-		//robotUrl = "ws://10.0.0.21:9090"		// testing
-		//robotUrl = "ws://george.local:9090"	//testing
+		//robotUrl = "ws://10.0.0.21:9090"		// for testing
+		//robotUrl = "ws://george.local:9090"	// for testing
 		robotUrl = robotUrl.replace("https:", "wss:");
 		robotUrl = robotUrl.replace("http:", "ws:");
 		if ((robotUrl.slice (0,5) != "wss://") && (robotUrl.slice (0,4) != "ws://") &&
@@ -511,6 +508,7 @@ function startRecognition () {
 				case "halt":
 					stopMotion = true;
 					//sendTwistMessage (0, 0);
+					cancelRobotMove ();
 					break testCandidate;
 				case "faster":
 					speedFactor *= 1.1;
@@ -744,15 +742,16 @@ function startButton(event) {
 			addLog ("back button");
 		}
 		function arrowRightGo () {
-			sendTwistMessage (0.0, -angularSpeed);
+			moveRobotFromPose (0, -angularSpeed);	
 			addLog ("rotate right button");
 		}
 		function arrowLeftGo () {
-			sendTwistMessage (0.0, angularSpeed);
+			moveRobotFromPose (0, angularSpeed);
 			addLog ("rotate left button");
 		}
 		function stopButton () {
 			stopMotion = true;
+			cancelRobotMove ();
 			addLog ("stop button");
 			//sendTwistMessage (0.0, 0.0);
 		}
@@ -857,7 +856,7 @@ function startButton(event) {
 						// alert ('Waypoint ' + waypointName + ' was not found');
 						}
 					else {
-						console.log('Value of waypoint ' + waypointName + ': ' + value);
+						console.log ('Value of waypoint ' + waypointName + ': ' + value);
 						if (value == "0") {
 							say ('Waypoint ' + waypointName + ' has been removed');
 						} else {
@@ -1054,6 +1053,18 @@ function startButton(event) {
 			console.log ('moveRobotFromPose goal sent');
 		}
 	}
+	
+	function cancelRobotMove () {
+		var statusString;
+		if (connected) {
+			var moveClient = new ROSLIB.ActionClient({
+				ros : ros,
+				serverName : 'move_base',
+				actionName : 'move_base_msgs/MoveBaseAction'  
+			});
+			moveClient.cancel ();  //cross fingers and hope?
+		}
+	}
 		
 	function paramdump () {
 		console.log ("sending paramdump message");
@@ -1128,7 +1139,7 @@ function startButton(event) {
 			useSimulator = false;
 			document.getElementById("simulatorButton").innerHTML = "Not using simulator";
 			document.getElementById("cmdr").innerHTML = "Robot Commander";
-			topicName = '/cmd_vel';     	
+			topicName = '/cmd_vel'; 
 		} else {
 			useSimulator = true;					// topic name for the UR robots
 			document.getElementById("simulatorButton").innerHTML = "Using simulator instead of robot";
@@ -1160,7 +1171,6 @@ function startButton(event) {
 		}
 	}
 	
-
 /*******************************************************************************
 *
 *                  support menu on header bar

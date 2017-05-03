@@ -2,7 +2,7 @@
 <widget id="com.jrlandau.robotcmdr" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Robot Commander</name>
     <description>
-        Allows you to control the UR robot with touch or voice commands.
+        Allows you to control the UR robot with touch or voice commands. This is the Android version of the program.
     </description>
     <author email="jrlandau@gmail.com" href="https://ubiquityrobotics.com/">
         Ubiquity Robotics Team
@@ -21,6 +21,7 @@
         <allow-intent href="market:*" />
     </platform>
     <platform name="ios">
+	
         <allow-intent href="itms:*" />
         <allow-intent href="itms-apps:*" />
     </platform>

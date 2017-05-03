@@ -161,4 +161,6 @@ a:hover {
 p.small {
     line-height: 90%;
 }
-
+.row {max-width: 100%;  /* this is a fix for the row overflowing right and left */
+	padding: 0 15px;
+}
