@@ -131,6 +131,13 @@ a:hover {
 	color:#006dcc;
 }
 
+.gbutton {
+	color:darkgray;
+}
+
+.mikeCircle {
+	color:#00BBA1;
+}
 /* ========================Dropdown ===================================) */
 /* The container <div> - needed to position the dropdown content */
 .dropdown {
@@ -163,4 +170,10 @@ p.small {
 }
 .row {max-width: 100%;  /* this is a fix for the row overflowing right and left */
 	padding: 0 15px;
+}
+.row.bottom-pad {
+   margin-bottom: 20px;
+}
+.row.top-pad {
+   margin-top: 20px;
 }

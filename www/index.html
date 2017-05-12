@@ -35,16 +35,11 @@
 	  <li class="mitem" style="list-style-type:none; position:absolute; left:20px; top:10px;"" href="#">Ubiquity Robotics</li>
 	  <li class="dropdown" style="position:absolute; right:20px; top:10px;">
 		<a class="mitem dropbtn" onclick="toggleDropdown()" style="position:absolute; right:20px; top:0;" href="#"><i id = "ddmenu" class="fa fa-bars"></i></a>
-		  <div id="myDropdown" class="dropdown-content smitem" style="position:absolute; left:-190px; top:50px; ">
-			<a href="#" data-toggle="modal" data-target="#helpModal" style="color:black;">Command List</a>
-			  <a href="#" id="settings" onclick="toggleInnerDropdown()" class="dropbtn">Settings</button>
-			  <div id="innerDropdown" class="dropdown-content">
-				<a href="#" id="muteButton" role="button" onclick="mute()" style="color:black;">Not muted</a>
-				<a href="#" id="wakeupButton" role="button" onclick="toggleWakeup()">Not using wakeup word</a>
-				<a href="#" id="showUnrecognizedButton" role="button" onclick="toggleUnrecognized()">Not showing Unrecognized Speech</a>
-				<a href="#" id="simulatorButton" role="button" onclick="toggleSimulator()">Not using simulator</a>
-			  </div>
+		  <div id="myDropdown" class="dropdown-content mitem" style="position:absolute; left:-290px; top:50px; min-width: 280px;">
+			<a href="#" data-toggle="modal" data-target="#helpModal" style="color:black;">Speech Commands</a>
+			<a href="#" data-toggle="modal" data-target="#settingsModal" style="color:black;"><i class="fa fa-cog" aria-hidden="true"></i> Settings</a>				
 			<a href="#" data-toggle="modal" data-target="#aboutModal" style="color:black;">About</a>
+			  </div>
 		  </div>
 	   </li>
 	</ul>
@@ -73,52 +68,66 @@
 		<div id="speed-slider"></div>  -->
 
     <div class="container-fluid">
-
-        <div class="row">
-            <div class="col-xs-4">
+<!-- Top Row -->
+        <div class="row bottom-pad">
+ 			<div class="col-xs-4" style="text-align:center">
+                <span class="fa fa-reply fa-4x toggle gbutton" id="reply" ontouchstart="fwdTurnLeft()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Forward Turn Right">
+                </span>
             </div>
-            <div class="col-xs-4" style="text-align:center">
-                <span class="fa fa-arrow-up fa-5x mbutton" id="arrowUp" ontouchstart="arrowUpGo()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Forward">
+             <div class="col-xs-4" style="text-align:center">
+                <span class="fa fa-arrow-up fa-4x toggle gbutton" id="arrowUp" ontouchstart="arrowUpGo()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Forward">
+                </span>
+            </div>
+			<div class="col-xs-4" style="text-align:center">
+                <span class="fa fa-share fa-4x toggle gbutton" id="reply" ontouchstart="fwdTurnRight()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Forward Turn Right">
                 </span>
             </div>
         </div>
- 
+
+ <!-- Middle Row -->
         <div class="row">
             <div class="col-xs-4"  style="text-align:center">
-                <p><a class="fa fa-rotate-left fa-5x mbutton vcenter"  ontouchstart="arrowLeftGo()" ontouchend="arrowMotionStop()" "data-toggle="tooltip" data-placement="left" title="Rotate Left"></a>
+                <p><a class="fa fa-rotate-left fa-4x toggle gbutton vcenter"  ontouchstart="arrowLeftGo()" ontouchend="arrowMotionStop()" "data-toggle="tooltip" data-placement="left" title="Rotate Left"></a>
                 </p>
             </div>
 
 			<div class="col-xs-4" style="text-align:center">
-			<span id='start_button' class="fa-stack fa-4x vcenter"  
+			<span id='start_button' class="fa-stack fa-2x vcenter"  
 					onclick="startButton(event)" alt="Start">
-			   <i id='mic-bg' class="fa fa-circle fa-stack-2x" style="color:#00BBA1;"></i>   <!-- was #A8A8A8 -->
+			   <i id='mic-bg' class="fa fa-circle fa-stack-2x gbutton toggle2"></i>   <!-- was #A8A8A8 -->
 			   <i id='mic' class="fa fa-microphone fa-stack-1x fa-inverse"></i>
 			   <i id='mic-slash' class="fa fa-microphone-slash fa-stack-1x 
 						fa-inverse" style="display:none;"></i>
 			</span>
 			</div>
 
-            <div class="col-xs-4 mbutton vcenter" style="text-align:center">
-                <p><a class="fa fa-rotate-right fa-5x"  ontouchstart="arrowRightGo()" ontouchend="arrowMotionStop()""data-toggle="tooltip" data-placement="left" title="Rotate Right" ></a>
-                </p>
+            <div class="col-xs-4 vcenter" style="text-align:center">
+                <span><a class="fa fa-rotate-right fa-4x toggle gbutton"  ontouchstart="arrowRightGo()" ontouchend="arrowMotionStop()""data-toggle="tooltip" data-placement="left" title="Rotate Right" ></a>
+                </span>
+            </div>
+        </div>
+	<!-- Bottom Row -->
+        <div class="row top-pad">
+ 			<div class="col-xs-4" style="text-align:center">
+                <span class="fa fa-reply fa-4x fa-flip-vertical toggle gbutton" id="backTurnLeft" ontouchstart="backTurnLeft()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Back Turn Left">
+                </span>
+            </div>
+             <div class="col-xs-4" style="text-align:center">
+                <span class="fa fa-arrow-up fa-4x toggle gbutton" id="arrowUp" ontouchstart="arrowUpGo()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Forward">
+                </span>
+            </div>
+			<div class="col-xs-4" style="text-align:center">
+                <span class="fa fa-share fa-4x fa-flip-vertical toggle gbutton" id="backTurnRight" ontouchstart="backTurnRight()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Back Turn Right">
+                </span>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-xs-4">
-            </div>
-            <div class="col-xs-4 mbutton vcenter" style="text-align:center">
-                <p><a class="fa fa-arrow-down fa-5x" ontouchstart="arrowDownGo()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Back"></a>
-                </p>
-            </div>
-        </div>
 
-		<div class="row">
+		<div class="row top-pad">
             <div class="col-xs-2">
             </div>
 			<div class="col-xs-8 vcenter" style="text-align:center">
-       			<button type="button" class="btn btn-danger btn-lg btn-block" style="font-size:25" onclick="stopButton()">
+       			<button type="button" class="btn btn-default btn-lg btn-block toggle3" style="font-size:25" onclick="stopButton()">
 					<strong>Stop</strong></button>
             </div>
     	</div>
@@ -128,6 +137,27 @@
         <p id="infoMsg" class="info"></p>
 	</div>
 	
+	<div class="modal" id="settingsModal" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
+		<div class="modal-dialog">
+		    <div class="modal-content">
+		        <div class="modal-header">
+				    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				    <h4 class="modal-title" id="usingSpeech"><strong>Settings</strong></h4>
+		        </div>
+		        <div class="modal-body mitem">
+		            <input type="checkbox"  id="muteButton" role="button" onclick="mute()"> Muted<br><br>
+					<input type="checkbox"  id="wakeupButton" role="button" onclick="toggleWakeup()"> Using wakeup word<br><br>
+					<input type="checkbox"  id="showUnrecognizedButton" role="button" onclick="toggleUnrecognized()"> Showing unrecognized Speech<br><br>
+					<input type="checkbox"  id="simulatorButton" role="button" onclick="toggleSimulator()"> Using simulator<br>
+		        </div>
+		        <div class="modal-footer">
+		            <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
+		    	</div>
+			</div>
+	    </div>
+	</div>
+
+	
 	<div class="modal" id="helpModal" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
 		<div class="modal-dialog">
 		    <div class="modal-content">
@@ -135,10 +165,10 @@
 				    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
 				    <h4 class="modal-title" id="usingSpeech"><strong>Using Speech Commands</strong></h4>
 		        </div>
-		        <div class="modal-body smitem">
+		        <div class="modal-body mitem">
 		            <p id="commandHeader"><strong>Commands</strong></p>
-					<p class=small>forward, keep going, go ahead, go straight, go<br>
-					reverse, back, backward, go back<br>
+					<p class=small>forward, advance, keep going, go ahead, go straight, go<br>
+					reverse, back, backward, go back, retreat<br>
 					forward/reverse etc., ____ meters/centimeters/feet<br>
 					turn right<br>
 					turn left<br>
@@ -147,7 +177,7 @@
 					stop, halt<br>
 					faster, speed up<br>
 					slower, slow down<br>
-					waypoint ____ (waypoint name)<br>
+					(set) waypoint ____ (waypoint name)<br>
 					go to ____ (waypoint name)<br>
 					remove waypoint ____ (waypoint name)<br>
 					list waypoints<br>
@@ -155,7 +185,7 @@
 					</p>
 		        </div>
 		        <div class="modal-footer">
-		            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+		            <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
 		    	</div>
 			</div>
 	    </div>
@@ -174,7 +204,7 @@
 					<p>Repository: https://github.com/UbiquityRobotics/speech_commands</p>
 		        </div>
 		        <div class="modal-footer">
-		            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+		            <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
 		    	</div>
 			</div>
 	    </div>

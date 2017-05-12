@@ -16,8 +16,9 @@ var topicName = '/cmd_vel';     					// topic name for the UR robots
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
 var speedFactor = 1.0;								// multiplies or divides speed to go faster or slower
 var linearSpeed = 0.2, angularSpeed = 1.0;			// initial speed
-var linearRepeat = 25, angularRepeat = 25;			// number of times to repeat command
 var repeatInterval = 200;							// wait time between repeats, in ms
+var linearRepeat = 60 * (1000 / repeatInterval);
+var angularRepeat = 60* (1000 / repeatInterval);	// max number of times to repeat command
 var stopMotion = true;
 var robotUrl;
 var muted = false;
@@ -187,6 +188,9 @@ function rosConnect(robotUrl) {
 		connectButton = document.getElementById("connectButton");
 		connectButton.innerHTML = "Disconnect";
 		connectButton.style.background="#00cc00";    		// green
+		$('.toggle').toggleClass('mbutton gbutton');		// change button colors	
+		$('.toggle2').toggleClass('mikeCircle gbutton');			
+		$('.toggle3').toggleClass('btn-default btn-danger');			
 		say ('connected');
 		connected = true;
 	});
@@ -208,6 +212,9 @@ function rosConnect(robotUrl) {
 			connectButton = document.getElementById("connectButton");
 			connectButton.style.background = "#006dcc";    
 			connectButton.innerHTML = "Connect";
+			$('.toggle').toggleClass('mbutton gbutton');
+			$('.toggle2').toggleClass('mikeCircle gbutton');			
+			$('.toggle3').toggleClass('btn-default btn-danger');			
 			say ('connection closed');   
 			console.log('Connection to websocket server closed.');
 		}
@@ -430,6 +437,7 @@ function startRecognition () {
 				case 'foreword':
 				case 'keep going':
 				case 'ahead':
+				case 'advance':
 				case 'straight':
 				case 'go':
 					if (words.length == 1) {			
@@ -447,6 +455,7 @@ function startRecognition () {
 					break testCandidate;
 				case "reverse":
 				case "backward":
+				case "retreat":
 				case "back":
 					if (words.length == 1) {			
 						x = -linearSpeed;
@@ -475,18 +484,23 @@ function startRecognition () {
 					} 
 					rotswitch: switch (words [1]) {
 						case "right":
-							//z = -dist;
-							moveRobotFromPose (0, -dist);	
+							if (words.length == 2 ) {	
+								sendTwistMessage (0, -dist);
+							} else {
+								moveRobotFromPose (0, -dist);
+							}	
 							break rotswitch;
 						case "left":
-							moveRobotFromPose (0, dist);
-							//z = dist;
+							if (words.length == 2 ) {	
+								sendTwistMessage (0, dist);
+							} else {
+								moveRobotFromPose (0, dist);
+							}
 							break rotswitch;
 						default:
 							commandFound = false;
 							break testCandidate;
 					}
-					// sendTwistMessage (x, z);
 					break testCandidate;
 					
 				case "turn":
@@ -507,7 +521,7 @@ function startRecognition () {
 				case "stop":
 				case "halt":
 					stopMotion = true;
-					//sendTwistMessage (0, 0);
+					sendTwistMessage (0, 0);
 					cancelRobotMove ();
 					break testCandidate;
 				case "faster":
@@ -545,6 +559,9 @@ function startRecognition () {
 		// it may yet be a waypoint command
 			if (!commandFound) {
 				if (words && words.length > 1) {
+					if ((words [0] == "set") && (words [1] == "waypoint")) {		// trim the word "set"
+						words = words.slice (1);
+					}
 					if (words [0] == "waypoint") {			// it is a waypoint command, to set a waypoint
 						commandFound = true;				// prevent the error msg
 						var waypoint = words.slice(1).join(" ");
@@ -697,7 +714,7 @@ function startButton(event) {
 
 		function sendTwistMessage(xMove, zMove) {
 			console.log ("sending twist x:" + xMove + " z:" + zMove);
-		// linear x and y movement and angular z movement
+			// linear x and y movement and angular z movement
 			
 			var cmdVel = new ROSLIB.Topic({
 				ros : ros,
@@ -742,18 +759,18 @@ function startButton(event) {
 			addLog ("back button");
 		}
 		function arrowRightGo () {
-			moveRobotFromPose (0, -angularSpeed);	
+			sendTwistMessage (0, -angularSpeed);	
 			addLog ("rotate right button");
 		}
 		function arrowLeftGo () {
-			moveRobotFromPose (0, angularSpeed);
+			sendTwistMessage (0, angularSpeed);
 			addLog ("rotate left button");
 		}
 		function stopButton () {
 			stopMotion = true;
 			cancelRobotMove ();
+			sendTwistMessage (0.0, 0.0);
 			addLog ("stop button");
-			//sendTwistMessage (0.0, 0.0);
 		}
 		function arrowMotionStop () {
 			stopMotion = true;
@@ -1122,10 +1139,24 @@ function startButton(event) {
 	function mute () {
 		if (muted === true) {
 			muted = false;
-			document.getElementById("muteButton").innerHTML = "Not muted";
+			document.getElementById("muteButton").checked = true; //innerHTML = "Not muted";
 		} else {
 			muted = true;
-			document.getElementById("muteButton").innerHTML = "Muted";
+			document.getElementById("muteButton").checked = false; //innerHTML = "Muted";
+		}
+	}
+
+	function toggleSimulator () {
+		if (useSimulator) {
+			useSimulator = false;
+			document.getElementById("simulatorButton").checked = false;	//innerHTML = "Not using simulator";
+			document.getElementById("cmdr").innerHTML = "Robot Commander";
+			topicName = '/cmd_vel'; 
+		} else {
+			useSimulator = true;					// topic name for the UR robots
+			document.getElementById("simulatorButton").checked = true; 	// innerHTML = "Using simulator instead of robot";
+			document.getElementById("cmdr").innerHTML = "Stage Sim Commander";
+			topicName = '/cmd_vel_mux/input/navi'; 	// topic name for the Stage simulator
 		}
 	}
 	
@@ -1134,27 +1165,13 @@ function startButton(event) {
 		setWakeupButton ();
 	}
 	
-	function toggleSimulator () {
-		if (useSimulator) {
-			useSimulator = false;
-			document.getElementById("simulatorButton").innerHTML = "Not using simulator";
-			document.getElementById("cmdr").innerHTML = "Robot Commander";
-			topicName = '/cmd_vel'; 
-		} else {
-			useSimulator = true;					// topic name for the UR robots
-			document.getElementById("simulatorButton").innerHTML = "Using simulator instead of robot";
-			document.getElementById("cmdr").innerHTML = "Stage Sim Commander";
-			topicName = '/cmd_vel_mux/input/navi'; 	// topic name for the Stage simulator
-		}
-	}
-	
 	function setWakeupButton () {
-		if (useWakeup === false) {
-			document.getElementById("wakeupButton").innerHTML = "Wakeup word is not required";
-			document.getElementById("commandHeader").innerHTML = "<strong>Commands</strong>";
+		if (!useWakeup) {
+			document.getElementById("wakeupButton").checked = false;	//innerHTML = "Wakeup word is not required";
+		//	document.getElementById("commandHeader").innerHTML = "<strong>Commands</strong>";
 		} else {
-			document.getElementById("wakeupButton").innerHTML = 'Wakeup word "' + wakeup[0] + '" is required' ;
-			document.getElementById("commandHeader").innerHTML = '<strong>Commands--must be preceded by the word "Robot"</strong>';
+			document.getElementById("wakeupButton").checked = true;	// innerHTML = 'Wakeup word "' + wakeup[0] + '" is required' ;
+		//	document.getElementById("commandHeader").innerHTML = '<strong>Commands--must be preceded by the word "Robot"</strong>';
 		}
 	}
 	
@@ -1164,10 +1181,10 @@ function startButton(event) {
 	}
 	
 	function setshowUnrecognizedButton () {
-		if (showUnrecognized === false) {
-			$('#showUnrecognizedButton').html('Not showing unrecognized speech');
+		if (!showUnrecognized) {
+			document.getElementById("showUnrecognizedButton").checked = false;
 		} else {
-			document.getElementById("showUnrecognizedButton").innerHTML = "Showing unrecognized speech";
+			document.getElementById("showUnrecognizedButton").checked = true;
 		}
 	}
 	
@@ -1199,11 +1216,16 @@ function toggleInnerDropdown() {
 
 // Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {
-//  console.log (event.target);
-  if ((event.target.id != "ddmenu")&&(event.target.id != "settings")) { // was but did not work: (!event.target.matches('.dropbtn') && !event.target.matches('.fa fa-bars')) {
+  console.log ("Click event.target id is " + event.target.id);
+  if ((event.target.id != "ddmenu")&&(event.target.id != "settings")&&(event.target.id != "muteButton")
+	 &&(event.target.id != "showUnrecognizedButton") &&(event.target.id != "simulatorButton") &&(event.target.id != "wakeupButton" )) { // was but did not work: (!event.target.matches('.dropbtn') && !event.target.matches('.fa fa-bars')) {
 	var dd = document.getElementById("myDropdown");
 	if (dd.style.display == "block") {
 		dd.style.display = "none";
+	}
+	var sett = document.getElementById ("innerDropdown");
+	 if (sett && (sett.style.display == "block")) {
+		sett.style.display = "none";
 	}
   }
 }; 
