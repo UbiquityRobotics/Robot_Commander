@@ -15,7 +15,7 @@ var topicName = '/cmd_vel';     					// topic name for the UR robots
 //	var topicName = '/cmd_vel_mux/input/navi';     		// topic name for the Stage simulator
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
 var speedFactor = 1.0;								// multiplies or divides speed to go faster or slower
-var linearSpeed = 0.2, angularSpeed = 1.0;			// initial speed
+var linearSpeed = 0.3, angularSpeed = 1.0;			// initial speed
 var repeatInterval = 200;							// wait time between repeats, in ms
 var linearRepeat = 60 * (1000 / repeatInterval);
 var angularRepeat = 60* (1000 / repeatInterval);	// max number of times to repeat command
@@ -71,9 +71,45 @@ function initialize() {
 		temp = "wss://" + location.hostname + ":9090";  //guess at it
 	}
 	document.getElementById("robotUrlEntry").value = temp;
+	
+	if (localStorage.getItem ("useWakeup") !== null) {
+		useWakeup = (localStorage.getItem ("useWakeup") == "true");
+	} 
+	setWakeupButton ();
+
+	if (localStorage.getItem ("showUnrecognized") !== null) {
+		showUnrecognized  = (localStorage.getItem ("showUnrecognized") == "true");		
+	} 
+	setshowUnrecognizedButton ();
+	
+	if (localStorage.getItem ("muted") !== null) {
+		muted = (localStorage.getItem ("muted") == "true");		
+	} 
+	setMuteButton ();
+	
+	if (localStorage.getItem ("useSimulator") !== null) {
+		useSimulator = (localStorage.getItem ("useSimulator") == "true");		
+	} 
+	setSimulatorButton ();
+	
+	linearSpeed = localStorage.getItem("linearSpeed");
+	if (linearSpeed == undefined || linearSpeed == null) {
+		linearSpeed = 1.0
+	} else {
+		linearSpeed = parseFloat(linearSpeed, 1.0)
+	}
+	
+	angularSpeed = localStorage.getItem("angularSpeed");
+	if (angularSpeed == undefined || angularSpeed == null) {
+		angularSpeed = 1.0
+	} else {
+		angularSpeed = parseFloat(angularSpeed, 1.0)
+	}
+	
+	
+
 //		if (window.SpeechSynthesisUtterance === undefined) {
-//			muted = true;
-//		}
+//			muted = true;	}
 	infoMsg = document.getElementById ("infoMsg");
 //		showInfo ("");
 
@@ -195,14 +231,18 @@ function rosConnect(robotUrl) {
 		connected = true;
 	});
 		
-	ros.on('error', function(error) {
+	ros.on ('error', function(error) {
 		console.log (error);
 		 say ('Darn. We failed to connect.');
 		 //none of the following work... 
 		 //alert (error.stack);
 		 //alert (error.message);
 		 //alert (JSON.stringify(error));
-		 bootbox.alert ('Error connecting to websocket server. ' + error);
+		 bootbox.alert ({
+			 title: 'Connection Failure',
+			 message: 'Error connecting to websocket server. ' + error,
+			 className: 'bootbox-msg'
+		 });
 	});
 
 	ros.on('close', function() {
@@ -357,9 +397,12 @@ function startRecognition () {
 			showInfo("No speech was heard");
 			//noRestartReco = false;
 		} else {
-			bootbox.alert ("recognition error: " + JSON.stringify (err));
+			bootbox.alert ({
+			title: 'Recognition error',
+			message: JSON.stringify (err),
+			className: 'bootbox-msg'
+		 });
 		}
-		// prompt ("No speech was heard. On retry, speak without delay.");
 	}
 	
 	/*----------------------------------------------------
@@ -607,28 +650,27 @@ function startRecognition () {
 			altNumber = i;
 			break testAllCandidates;
 		}
-	}		// end of for loop
+		}		// end of for loop
 		
-	console.log (allResults);
-	if (showUnrecognized) {addLog (allResults);}
-	if (commandFound) {								// publish the command
-		commands = candidate + " (alt. #" + (altNumber + 1) + " of " + results.length + ") " + commands;
-		commands = commands.slice (0, 50);
-		//final_span.innerHTML = "Commands ["+ total_recognized + "]: "  + commands;
-		//cmd_err_span.innerHTML = "";
-		total_recognized++;
-		addLog (commands);
-		
-	// Research: Keep count of how often we used the first result
-		if (altNumber == 0) {
-			localStorage.firstResultOK = Number(localStorage.firstResultOK) + 1;
-		} else {
-			localStorage.otherResultOK = Number(localStorage.otherResultOK) + 1;
-		} 
-		console.log ("First answer recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
-			(Number(localStorage.firstResultOK) + Number(localStorage.otherResultOK))).toFixed(2) + "%");
-	} else if (topCandidate != "") {
-			addLog (topCandidate.toLowerCase() + " is not recognized as a command", "red");
+		console.log (allResults);
+		if (commandFound) {								// publish the command
+			commands = candidate + " (alt. #" + (altNumber + 1) + " of " + results.length + ") " + commands;
+			commands = commands.slice (0, 50);
+			//final_span.innerHTML = "Commands ["+ total_recognized + "]: "  + commands;
+			//cmd_err_span.innerHTML = "";
+			total_recognized++;
+			addLog (commands);
+			
+		// Research: Keep count of how often we used the first result
+			if (altNumber == 0) {
+				localStorage.firstResultOK = Number(localStorage.firstResultOK) + 1;
+			} else {
+				localStorage.otherResultOK = Number(localStorage.otherResultOK) + 1;
+			} 
+			console.log ("First answer recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
+				(Number(localStorage.firstResultOK) + Number(localStorage.otherResultOK))).toFixed(2) + "%");
+		} else if (showUnrecognized && (allResults != "")) {
+				addLog ("? " + allResults, "red");
 		}
 	}	// end of recogOnresult
 }   // end of function startRecognition
@@ -1136,48 +1178,59 @@ function startButton(event) {
 	}
 */	
 		
-	function mute () {
-		if (muted === true) {
-			muted = false;
-			document.getElementById("muteButton").checked = true; //innerHTML = "Not muted";
+	function toggleMute () {
+		muted = !muted;
+		setMuteButton ();
+		localStorage.muted = muted;
+		localStorage.setItem ("muted", (muted?"true":"false"));
+	}
+	
+	function setMuteButton () {
+		if (muted) {
+			document.getElementById ("muteButton").checked = true;	
 		} else {
-			muted = true;
-			document.getElementById("muteButton").checked = false; //innerHTML = "Muted";
+			document.getElementById ("muteButton").checked = false;	
 		}
 	}
 
 	function toggleSimulator () {
+		useSimulator = !useSimulator ;
+		setSimulatorButton ();
+		localStorage.setItem ("useSimulator", (useSimulator?"true":"false"));
+	}
+	
+	function setSimulatorButton () {
 		if (useSimulator) {
-			useSimulator = false;
-			document.getElementById("simulatorButton").checked = false;	//innerHTML = "Not using simulator";
-			document.getElementById("cmdr").innerHTML = "Robot Commander";
-			topicName = '/cmd_vel'; 
-		} else {
-			useSimulator = true;					// topic name for the UR robots
-			document.getElementById("simulatorButton").checked = true; 	// innerHTML = "Using simulator instead of robot";
+			document.getElementById("simulatorButton").checked = true;
 			document.getElementById("cmdr").innerHTML = "Stage Sim Commander";
 			topicName = '/cmd_vel_mux/input/navi'; 	// topic name for the Stage simulator
+		} else {
+			document.getElementById("simulatorButton").checked = false;		
+			document.getElementById("cmdr").innerHTML = "Robot Commander";
+			topicName = '/cmd_vel'; 
 		}
 	}
 	
 	function toggleWakeup () {
 		useWakeup = !useWakeup;
 		setWakeupButton ();
+		localStorage.useWakeup = useWakeup;
+		localStorage.setItem ("useWakeup", (useWakeup?"true":"false"));
 	}
 	
 	function setWakeupButton () {
 		if (!useWakeup) {
-			document.getElementById("wakeupButton").checked = false;	//innerHTML = "Wakeup word is not required";
-		//	document.getElementById("commandHeader").innerHTML = "<strong>Commands</strong>";
+			document.getElementById("wakeupButton").checked = false;	
 		} else {
-			document.getElementById("wakeupButton").checked = true;	// innerHTML = 'Wakeup word "' + wakeup[0] + '" is required' ;
-		//	document.getElementById("commandHeader").innerHTML = '<strong>Commands--must be preceded by the word "Robot"</strong>';
+			document.getElementById("wakeupButton").checked = true;	
 		}
 	}
 	
 	function toggleUnrecognized () {
 		showUnrecognized = !showUnrecognized;
 		setshowUnrecognizedButton ();
+		localStorage.showUnrecognized = showUnrecognized;
+		localStorage.setItem ("showUnrecognized", (showUnrecognized?"true":"false"));
 	}
 	
 	function setshowUnrecognizedButton () {
@@ -1187,6 +1240,25 @@ function startButton(event) {
 			document.getElementById("showUnrecognizedButton").checked = true;
 		}
 	}
+	
+	function setSpeed () {
+		var linValue = linearSpeed * 10;
+		var angValue = angularSpeed * 10;
+		bootbox.confirm ("<form id='infos' class='bootbox-msg' action=''>\
+		Linear speed (0-1): <input type='range' min='0' max='10' step='1' name='linearSpeed' value='" + linValue + "'/><br/>\
+		Angular speed (0-1):<input type='range'  min='0' max='10' step='1' name='angularSpeed' value='" + angValue + "'/>\
+		</form>", 
+		function (result) {
+			if(result) {
+				linearSpeed = document.querySelector('[name="linearSpeed"]').value / 10;
+				angularSpeed = document.querySelector('[name="angularSpeed"]').value / 10;
+				localStorage.setItem ("linearSpeed", linearSpeed.toString());
+				localStorage.setItem ("angularSpeed", angularSpeed.toString());
+			}
+		}
+	);
+	}
+	
 	
 /*******************************************************************************
 *

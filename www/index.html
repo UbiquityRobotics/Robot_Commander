@@ -92,7 +92,7 @@
             </div>
 
 			<div class="col-xs-4" style="text-align:center">
-			<span id='start_button' class="fa-stack fa-2x vcenter"  
+			<span id='start_button' class="fa-stack fa-3x vcenter"  
 					onclick="startButton(event)" alt="Start">
 			   <i id='mic-bg' class="fa fa-circle fa-stack-2x gbutton toggle2"></i>   <!-- was #A8A8A8 -->
 			   <i id='mic' class="fa fa-microphone fa-stack-1x fa-inverse"></i>
@@ -113,7 +113,7 @@
                 </span>
             </div>
              <div class="col-xs-4" style="text-align:center">
-                <span class="fa fa-arrow-up fa-4x toggle gbutton" id="arrowUp" ontouchstart="arrowUpGo()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Forward">
+                <span class="fa fa-arrow-down fa-4x toggle gbutton" id="arrowDown" ontouchstart="arrowDownGo()" ontouchend="arrowMotionStop()" data-toggle="tooltip" data-placement="left" title="Back">
                 </span>
             </div>
 			<div class="col-xs-4" style="text-align:center">
@@ -145,10 +145,11 @@
 				    <h4 class="modal-title" id="usingSpeech"><strong>Settings</strong></h4>
 		        </div>
 		        <div class="modal-body mitem">
-		            <input type="checkbox"  id="muteButton" role="button" onclick="mute()"> Muted<br><br>
-					<input type="checkbox"  id="wakeupButton" role="button" onclick="toggleWakeup()"> Using wakeup word<br><br>
-					<input type="checkbox"  id="showUnrecognizedButton" role="button" onclick="toggleUnrecognized()"> Showing unrecognized Speech<br><br>
-					<input type="checkbox"  id="simulatorButton" role="button" onclick="toggleSimulator()"> Using simulator<br>
+		            <input type="checkbox"  id="muteButton" role="button" onclick="toggleMute()"> Muted<br><br>
+					<input type="checkbox"  id="wakeupButton" role="button" onclick="toggleWakeup()"> Require wakeup word<br><br>
+					<input type="checkbox"  id="showUnrecognizedButton" role="button" onclick="toggleUnrecognized()"> Show unrecognized Speech<br><br>
+					<input type="checkbox"  id="simulatorButton" role="button" onclick="toggleSimulator()"> Use simulator<br><br>
+					<p type="button" id="linVelBtn" onclick="setSpeed()"> Speed</p>
 		        </div>
 		        <div class="modal-footer">
 		            <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
@@ -167,8 +168,7 @@
 		        </div>
 		        <div class="modal-body mitem">
 		            <p id="commandHeader"><strong>Commands</strong></p>
-					<p class=small>forward, advance, keep going, go ahead, go straight, go<br>
-					reverse, back, backward, go back, retreat<br>
+					<p class=small>forward, advance, keep going, go ahead, go straight, reverse, back, backward, go back, retreat<br>
 					forward/reverse etc., ____ meters/centimeters/feet<br>
 					turn right<br>
 					turn left<br>
@@ -191,14 +191,14 @@
 	    </div>
 	</div>
 
-	<div class="modal" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
+	<div class="modal" id="aboutModal" tabindex="-1" class='bootbox-msg' role="dialog" aria-labelledby="basicModal" aria-hidden="true">
 		<div class="modal-dialog">
 		    <div class="modal-content">
 		        <div class="modal-header">
 				    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
 				    <h4 class="modal-title" id="aboutSpeech">About Speech Commands</h4>
 		        </div>
-		        <div class="modal-body">
+		        <div class="modal-body bootbox-msg ">
 		            <p>Speech Commands was written for the Ubiquity Robotics robots. It should support any ROS robot.</p>
 					<p>Author: Joe Landau jrlandau@gmail.com</p>
 					<p>Repository: https://github.com/UbiquityRobotics/speech_commands</p>
