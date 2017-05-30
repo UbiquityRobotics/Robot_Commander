@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.jrlandau.robotcmdr" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.jrlandau.robotcmdr" version="0.0.3" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Robot Commander</name>
     <description>
-        Allows you to control the UR robot with touch or voice commands. This is the Android version of the program.
+        Control the UR and similar ROS robots with touch or voice commands. This is the Android version.
     </description>
     <author email="jrlandau@gmail.com" href="https://ubiquityrobotics.com/">
         Ubiquity Robotics Team
@@ -21,7 +21,6 @@
         <allow-intent href="market:*" />
     </platform>
     <platform name="ios">
-	
         <allow-intent href="itms:*" />
         <allow-intent href="itms-apps:*" />
     </platform>
@@ -29,4 +28,6 @@
     <plugin name="cordova-plugin-speechrecognition" spec="~1.1.2" />
     <plugin name="cordova.plugins.diagnostic" spec="~3.5.0" />
     <plugin name="com.koalasafe.cordova.plugin.multicastdns" spec="https://github.com/stevenpack/phonegap-multicastdns" />
+    <plugin name="cordova-plugin-app-version" spec="~0.1.9" />
+    <plugin name="cordova-plugin-device" spec="~1.1.6" />
 </widget>

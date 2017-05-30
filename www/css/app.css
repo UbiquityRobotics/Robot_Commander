@@ -177,3 +177,11 @@ p.small {
 .row.top-pad {
    margin-top: 20px;
 }
+.urlHelp {
+	background-color:LemonChiffon; 
+	margin:10px; 
+	padding:7px; 
+	border:2px aolid; 
+	border-radius: 5px; 
+	font-size: 16px;"
+}

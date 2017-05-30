@@ -46,6 +46,9 @@ Each time you wish to start using Robot Commander:
 * Run the tf2_web_republisher on the robot:
 
         rosrun tf2_web_republisher tf2_web_republisher
+* Alternatively, there is a launch file which starts the needed functions on the robot:
+
+        roslaunch robotcmdr robotcmdr.launch
 
 * in the app, enter the robot's url with port number (usually 9090)
 
@@ -57,9 +60,9 @@ If your robot has a local address, you may use it instead of the numeric IP addr
 
 
 ### Running
-* Click any arrow to move the robot.
-* Click the Microphone to use speech. 
-* Say, "forward", or other commands.  There is a list of commands in the menu in the top right corner of the screen. 
+* Press any arrow to move the robot.
+* Tap the Microphone to use speech. 
+* Say, "forward", "back", or other commands.  There is a list of commands in the menu in the top right corner of the screen. 
 * In environments where there is a lot of competing speech, you can turn on the "Wakeup Word" feature, in Settings.  When it is on, all commands must be prefaced by the wakeup word, "robot". 
 
 #To Do / Issues

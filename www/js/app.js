@@ -28,6 +28,9 @@ var showUnrecognized = false;
 var infoMsg;
 var useSimulator = false;
 var mic, micSlash, micBg;
+var g_version = "0.0.0";
+var g_versionCode = "0";
+var g_appname = "Robot Commander";
 	
 
 function setMicInactive() {
@@ -106,7 +109,18 @@ function initialize() {
 		angularSpeed = parseFloat(angularSpeed, 1.0)
 	}
 	
-	
+	//--------------------application Info------------------------------
+	cordova.getAppVersion.getVersionCode (function (app) {
+		g_versionCode = app;	
+	});
+	cordova.getAppVersion.getVersionNumber(function (version) {
+		g_version = version;
+		document.getElementById ("version").textContent = "Version " + g_version + ", version code " + g_versionCode;
+	});
+	cordova.getAppVersion.getAppName(function (app) {
+		g_appName = app;	
+	});
+	document.getElementById ("platform").textContent = "Platform: " + device.platform + " " + device.version;	
 
 //		if (window.SpeechSynthesisUtterance === undefined) {
 //			muted = true;	}
@@ -116,8 +130,8 @@ function initialize() {
 	document.getElementById("wakeupButton").innerHTML = "Wakeup word isn't required";
 
 	checkPermissions ();
-
-		//--------------------Permissions-------------------------
+	
+	//--------------------Permissions-------------------------
 	function checkPermissions() {
 		var permissionRequests = [];
 		cordova.plugins.diagnostic.getPermissionsAuthorizationStatus(function(statuses){
@@ -229,6 +243,7 @@ function rosConnect(robotUrl) {
 		$('.toggle3').toggleClass('btn-default btn-danger');			
 		say ('connected');
 		connected = true;
+		toggleMotionArrows ();
 	});
 		
 	ros.on ('error', function(error) {
@@ -255,7 +270,8 @@ function rosConnect(robotUrl) {
 			$('.toggle').toggleClass('mbutton gbutton');
 			$('.toggle2').toggleClass('mikeCircle gbutton');			
 			$('.toggle3').toggleClass('btn-default btn-danger');			
-			say ('connection closed');   
+			say ('connection closed'); 
+			toggleMotionArrows ();			
 			console.log('Connection to websocket server closed.');
 		}
 	});
@@ -755,6 +771,7 @@ function startButton(event) {
  //       }
 
 		function sendTwistMessage(xMove, zMove) {
+			var reps = 0;
 			console.log ("sending twist x:" + xMove + " z:" + zMove);
 			// linear x and y movement and angular z movement
 			
@@ -776,9 +793,13 @@ function startButton(event) {
 					z: zMove*speedFactor
 				}
 			});
-			var reps = Math.max (1, Math.abs (twist.linear.x) > 0 ? linearRepeat : (Math.abs (twist.angular.z) > 0 ? angularRepeat : 1));
-			if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
+			if ((xMove == 0) && (zMove == 0 )) {
+				reps = 1;
+			} else {
+				reps = Math.max (1, Math.abs (twist.linear.x) > 0 ? linearRepeat : (Math.abs (twist.angular.z) > 0 ? angularRepeat : 1));
 				stopMotion = false;
+			}
+			if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
 				publishCmd ();
 			}
 			function publishCmd() {
@@ -807,6 +828,22 @@ function startButton(event) {
 		function arrowLeftGo () {
 			sendTwistMessage (0, angularSpeed);
 			addLog ("rotate left button");
+		}
+		function fwdTurnLeft () {
+			sendTwistMessage (linearSpeed, angularSpeed);
+			addLog ("Forward turn left button");
+		}
+		function fwdTurnRight () {
+			sendTwistMessage (linearSpeed, -angularSpeed);
+			addLog ("Forward turn right button");
+		}
+		function backTurnLeft () {
+			sendTwistMessage (-linearSpeed, angularSpeed);
+			addLog ("Back turn left button");
+		}
+		function backTurnRight () {
+			sendTwistMessage (-linearSpeed, -angularSpeed);
+			addLog ("Back turn right button");
 		}
 		function stopButton () {
 			stopMotion = true;
@@ -1241,25 +1278,33 @@ function startButton(event) {
 		}
 	}
 	
-	function setSpeed () {
-		var linValue = linearSpeed * 10;
-		var angValue = angularSpeed * 10;
-		bootbox.confirm ("<form id='infos' class='bootbox-msg' action=''>\
-		Linear speed (0-1): <input type='range' min='0' max='10' step='1' name='linearSpeed' value='" + linValue + "'/><br/>\
-		Angular speed (0-1):<input type='range'  min='0' max='10' step='1' name='angularSpeed' value='" + angValue + "'/>\
-		</form>", 
-		function (result) {
-			if(result) {
-				linearSpeed = document.querySelector('[name="linearSpeed"]').value / 10;
-				angularSpeed = document.querySelector('[name="angularSpeed"]').value / 10;
-				localStorage.setItem ("linearSpeed", linearSpeed.toString());
-				localStorage.setItem ("angularSpeed", angularSpeed.toString());
-			}
-		}
-	);
+	function openSettings () {
+		document.querySelector('[name="linearSpeed"]').value = linearSpeed * 10;
+		document.querySelector('[name="linOut"]').value ="Linear speed: "+ linearSpeed;
+		document.querySelector('[name="angularSpeed"]').value = angularSpeed * 10;
+		document.querySelector('[name="angOut"]').value = "Angular speed: " + angularSpeed;
 	}
 	
+	function closeSettings () {
+			linearSpeed = document.querySelector('[name="linearSpeed"]').value / 10;
+			angularSpeed = document.querySelector('[name="angularSpeed"]').value / 10;
+			localStorage.setItem ("linearSpeed", linearSpeed.toString());
+			localStorage.setItem ("angularSpeed", angularSpeed.toString());
+	}
 	
+/* function toggles between the motion arrows and the connection instructions */
+function toggleMotionArrows() {
+	var mo = document.getElementById("motion");
+	var co = document.getElementById("connection");
+	if (co.style.display == "block") {
+		co.style.display = "none";
+		mo.style.display = "block";
+		} else {
+		mo.style.display = "none";
+		co.style.display = "block";
+	}
+}
+
 /*******************************************************************************
 *
 *                  support menu on header bar
