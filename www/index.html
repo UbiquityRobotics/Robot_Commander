@@ -68,6 +68,7 @@
 		<div id="speed-slider"></div>  -->
 		
 	<div id="connection"  class="container-fluid urlHelp" style="display:block;">
+		<H4> Connect to the Robot</H4>
 		<p>Rosbridge must be running on the robot. Enter the robot's URL above, then press Connect.  The URL must begin with
 			ws:// or wss:// (Ubiquity robots use wss), and must end with
 			a colon and a port number--usually 9090.<br>
@@ -77,6 +78,9 @@
 			or, if your network allows names,<br>
 			<strong>wss://robbie.local:9090</strong>
 		</p>
+		<div class="text-right"> 
+			<button type="button" class="btn btn-success btn-sm" onclick="closeConnectAdvice()">Close</button>
+		</div>
 	</div>
 
     <div id="motion" style="display:none;" class="container-fluid">
@@ -154,7 +158,7 @@
 		    <div class="modal-content">
 		        <div class="modal-header">
 				    <!--<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>-->
-				    <h4 class="modal-title" id="usingSpeech"><strong>Settings</strong></h4>
+				    <h4 class="modal-title" ><strong>Settings</strong></h4>
 		        </div>
 		        <div class="modal-body mitem">
 		            <input type="checkbox"  id="muteButton" role="button" onclick="toggleMute()"> Muted<br><br>

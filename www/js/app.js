@@ -16,7 +16,7 @@ var topicName = '/cmd_vel';     					// topic name for the UR robots
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
 var speedFactor = 1.0;								// multiplies or divides speed to go faster or slower
 var linearSpeed = 0.3, angularSpeed = 1.0;			// initial speed
-var repeatInterval = 200;							// wait time between repeats, in ms
+var repeatInterval = 20;							// wait time between repeats, in ms
 var linearRepeat = 60 * (1000 / repeatInterval);
 var angularRepeat = 60* (1000 / repeatInterval);	// max number of times to repeat command
 var stopMotion = true;
@@ -30,7 +30,7 @@ var useSimulator = false;
 var mic, micSlash, micBg;
 var g_version = "0.0.0";
 var g_versionCode = "0";
-var g_appname = "Robot Commander";
+var g_appName = "Robot Commander";
 	
 
 function setMicInactive() {
@@ -238,12 +238,13 @@ function rosConnect(robotUrl) {
 		connectButton = document.getElementById("connectButton");
 		connectButton.innerHTML = "Disconnect";
 		connectButton.style.background="#00cc00";    		// green
-		$('.toggle').toggleClass('mbutton gbutton');		// change button colors	
-		$('.toggle2').toggleClass('mikeCircle gbutton');			
-		$('.toggle3').toggleClass('btn-default btn-danger');			
+		$('.toggle').removeClass('gbutton').addClass('mbutton');		// change button colors	
+		$('.toggle2').removeClass('gbutton').addClass('mikeCircle');			
+		$('.toggle3').removeClass('gbutton').addClass('btn-danger');	
+		
 		say ('connected');
 		connected = true;
-		toggleMotionArrows ();
+		showMotionArrows ();
 	});
 		
 	ros.on ('error', function(error) {
@@ -271,7 +272,7 @@ function rosConnect(robotUrl) {
 			$('.toggle2').toggleClass('mikeCircle gbutton');			
 			$('.toggle3').toggleClass('btn-default btn-danger');			
 			say ('connection closed'); 
-			toggleMotionArrows ();			
+			//toggleMotionArrows ();			
 			console.log('Connection to websocket server closed.');
 		}
 	});
@@ -772,7 +773,6 @@ function startButton(event) {
 
 		function sendTwistMessage(xMove, zMove) {
 			var reps = 0;
-			console.log ("sending twist x:" + xMove + " z:" + zMove);
 			// linear x and y movement and angular z movement
 			
 			var cmdVel = new ROSLIB.Topic({
@@ -799,11 +799,13 @@ function startButton(event) {
 				reps = Math.max (1, Math.abs (twist.linear.x) > 0 ? linearRepeat : (Math.abs (twist.angular.z) > 0 ? angularRepeat : 1));
 				stopMotion = false;
 			}
+			console.log ("Sending Twist x:" + xMove + " z:" + zMove + ", " + reps + " repetitions at " + repeatInterval + " ms. interval");
 			if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
 				publishCmd ();
 			}
 			function publishCmd() {
 				if (!stopMotion) {
+					console.log ("repeating twist " + reps);
 					cmdVel.publish (twist);
 					if (reps > 1) {
 						setTimeout (publishCmd, repeatInterval);
@@ -838,11 +840,11 @@ function startButton(event) {
 			addLog ("Forward turn right button");
 		}
 		function backTurnLeft () {
-			sendTwistMessage (-linearSpeed, angularSpeed);
+			sendTwistMessage (-linearSpeed, -angularSpeed);
 			addLog ("Back turn left button");
 		}
 		function backTurnRight () {
-			sendTwistMessage (-linearSpeed, -angularSpeed);
+			sendTwistMessage (-linearSpeed, angularSpeed);
 			addLog ("Back turn right button");
 		}
 		function stopButton () {
@@ -1025,7 +1027,16 @@ function startButton(event) {
 					tfClient.unsubscribe('base_link');  			// we only need this once
 					msgString = JSON.stringify(message);
 					console.log ("tfClient pose in " + tfClient.fixedFrame + ": " + msgString);
-					callbackPosition (msgString);		
+					let q = message.rotation;
+					if (q.x == 0 && q.y == 0 && q.z == 0 && q.w == 0){
+						bootbox.alert ({
+							title: 'Position Unknown',
+							message: "The waypoint was not set because the robot's position could not be determined.",
+							className: 'bootbox-msg'
+						});
+					} else {
+						callbackPosition (msgString);
+					}
 				
 				/* 		
 						// Formats the pose.
@@ -1292,18 +1303,22 @@ function startButton(event) {
 			localStorage.setItem ("angularSpeed", angularSpeed.toString());
 	}
 	
-/* function toggles between the motion arrows and the connection instructions */
-function toggleMotionArrows() {
-	var mo = document.getElementById("motion");
-	var co = document.getElementById("connection");
-	if (co.style.display == "block") {
-		co.style.display = "none";
-		mo.style.display = "block";
-		} else {
-		mo.style.display = "none";
-		co.style.display = "block";
-	}
+function closeConnectAdvice () {
+	showMotionArrows();
 }
+
+function showMotionArrows() {
+	document.getElementById("motion").style.display = "block";
+	document.getElementById("connection").style.display = "none";
+}
+
+function showConnectionAdvice() {
+	document.getElementById("motion").style.display = "none";
+	document.getElementById("connection").style.display = "block";
+}
+
+
+
 
 /*******************************************************************************
 *
