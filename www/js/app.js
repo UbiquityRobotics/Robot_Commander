@@ -31,6 +31,7 @@ var mic, micSlash, micBg;
 var g_version = "0.0.0";
 var g_versionCode = "0";
 var g_appName = "Robot Commander";
+var g_repeatableCommand = null;
 	
 
 function setMicInactive() {
@@ -571,6 +572,10 @@ function startRecognition () {
 						case "left":
 							z = angularSpeed;
 							break turnswitch;
+						case "around":
+						case "round":
+							moveRobotFromPose (0, -Math.PI);
+							break testCandidate;
 						default:
 							commandFound = false;
 							break testCandidate;
@@ -611,9 +616,24 @@ function startRecognition () {
 				case "help":
 					$('#helpModal').modal('show');
 					break testAllCandidates;
+				case "again":
+				case "repeat":
+					if (g_repeatableCommand) {
+						recogOnresult ([g_repeatableCommand]) 
+					} else {
+						say ("there is no repeatable command")
+					}
 				default: 
 					commandFound = false;
 					break testCandidate;
+			}	// end of testCandidate
+			
+		// save the command for re-use, but not if it's a waypoint command
+			
+			if (commandFound && candidate !== "again" && candidate !== "repeat") {
+				g_repeatableCommand = candidate;
+			} else {
+				g_repeatableCommand = null
 			}
 
 		// it may yet be a waypoint command
