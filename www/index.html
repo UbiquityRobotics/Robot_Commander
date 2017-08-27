@@ -180,7 +180,6 @@
 	    </div>
 	</div>
 
-	
 	<div class="modal" id="helpModal" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
 		<div class="modal-dialog">
 		    <div class="modal-content">
@@ -196,6 +195,7 @@
 					turn left<br>
 					rotate right (may add "n degrees")<br>
 					rotate left (may add "n degrees")<br>
+					turn around<br>
 					stop, halt<br>
 					faster, speed up<br>
 					slower, slow down<br>
@@ -203,6 +203,7 @@
 					go to ____ (waypoint name)<br>
 					remove waypoint ____ (waypoint name)<br>
 					list waypoints<br>
+					again, repeat<br>
 					help
 					</p>
 		        </div>
@@ -237,6 +238,12 @@
 <!--	<div id="dash">
 		<div id="speed_span" "Speed factor 1.00" class="final"></div>
     </div-->
+	
+	<!-- Extra button for testing stuff 
+	<div class="col-xs-3">
+		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="testButton ()">
+			<strong>Test Marker</strong></button>
+	</div>  -->
 
 	<div id="results">
 	Command Log:
@@ -248,12 +255,8 @@
     </div>
 
 	
-<!-- Extra button for testing stuff 
-	<div class="col-xs-3">
-		<button type="button" id="testButton" class="btn btn-primary btn-lg" style="font-size:25" onclick="paramdump ()">
-			<strong>Test Paramdump</strong></button>
-	</div>
--->
+
+
 <!------------
 					<p>Note: To test using the turtle simulator, change the variable topicName to '/turtle1/cmd_vel'. Run the following commands in the terminal, then refresh this page.</p>
 					<ol>

@@ -341,46 +341,8 @@ function connect () {
 		}, 2000); 
 	}
 }
-/*
-//	ros.on('connection', function() {
-	function onConnection () {
-		var connectButton;
-			console.log ('Connected to websocket server.');
-			localStorage.robotUrl = robotUrl;
-			connectButton = document.getElementById("connectButton");
-			connectButton.innerHTML = "Disconnect";
-			connectButton.style.background="#00cc00";    		// green
-			say ('connected');
-			connected = true;
-		}
-
-//	ros.on('error', function(error) {
-		function onError (error) {
-		console.log (error);
-		 say ('Darn. We failed to connect.');
-		 //none of the following work... 
-		 //alert (error.stack);
-		 //alert (error.message);
-		 //alert (JSON.stringify(error));
-		 bootbox.alert ('Error connecting to websocket server. ' + error);
-	}
-
-//	ros.on('close', function() {
-	function onClose () {	
-		var connectButton;	
-		if (connected) {			// throw away a second call
-			connected = false;
-			connectButton = document.getElementById("connectButton");
-			connectButton.style.background = "#006dcc";    
-			connectButton.innerHTML = "Connect";
-			say ('connection closed');   
-			console.log('Connection to websocket server closed.');
-		}
-	}
-*/
 
 function startRecognition () {
-		
     window.plugins.speechRecognition.startListening (
 		recogSuccess, 
 		recogError, 
@@ -394,7 +356,6 @@ function startRecognition () {
 	//showInfo('info_speak_now');
 	console.log('onstart');
 	setMicActive ();
-	
     
 	function recogSuccess (results) {
 		console.log ("recognition onresult, length " + results.length);
@@ -423,24 +384,13 @@ function startRecognition () {
 		}
 	}
 	
-	/*----------------------------------------------------
-	recognition.onend = function() {
-		console.log('onend; ' + (noRestartReco ? "dont restart" : "do restart"));
-		recognizing = false;
-		if (noRestartReco) {
-			return;
-		}
-		showInfo('');
-		restartReco();
-	}-------------------------------*/
-
 	function recogOnresult (results) {
 		console.log('recognition.onresult');
 		
 		function getDistance (quantity, what) {
 			var howmany;
 			howmany = Number(quantity);
-			if (isNaN(howmany)) {
+			if (isNaN (howmany)) {
 				if (quantity == "to" || quantity == "too") {
 					howmany = 2;
 				} else if (quantity == "for") {
@@ -465,7 +415,6 @@ function startRecognition () {
 		var commands = '';
 		var x = 0, y = 0, z = 0; 		// linear x and y movement and angular z movement
 		var commandFound = false;
-		// var result;
 		var candidate, topCandidate = "";		
 		var allResults = "";
 		var dist = 0;
@@ -476,6 +425,7 @@ function startRecognition () {
 		testAllCandidates:
 		for (var i = 0; i < results.length; ++i) {
 			candidate = results[i].toLowerCase().trim();
+			candidate = candidate.replace ("way point", "waypoint");			
 			var words = candidate.match(/[-\w]+/g); 				// parses candidate to array of words
 			if (useWakeup) {
 				if (wakeup.indexOf (words[0]) >= 0) {			// if the first word is a wakeup word 
@@ -619,21 +569,25 @@ function startRecognition () {
 				case "again":
 				case "repeat":
 					if (g_repeatableCommand) {
-						recogOnresult ([g_repeatableCommand]) 
+						recogOnresult ([g_repeatableCommand]); 
 					} else {
-						say ("there is no repeatable command")
+						say ("there is no repeatable command");
+						commandFound = false;
 					}
+					break testCandidate;
 				default: 
 					commandFound = false;
 					break testCandidate;
 			}	// end of testCandidate
 			
-		// save the command for re-use, but not if it's a waypoint command
+		// save the command for re-use, but not if it's a waypoint command or "again"
 			
-			if (commandFound && candidate !== "again" && candidate !== "repeat") {
-				g_repeatableCommand = candidate;
-			} else {
-				g_repeatableCommand = null
+			if (candidate !== "again" && candidate !== "repeat") {
+				if (commandFound) {
+					g_repeatableCommand = candidate;
+				} else {
+					g_repeatableCommand = null;
+				}
 			}
 
 		// it may yet be a waypoint command
@@ -683,7 +637,7 @@ function startRecognition () {
 				}
 			}
 		allResults += "/" + candidate;
-		if (commandFound === true) {
+		if (commandFound) {
 			altNumber = i;
 			break testAllCandidates;
 		}
@@ -713,7 +667,6 @@ function startRecognition () {
 }   // end of function startRecognition
 			
 /*
-	
         var teleop = new KEYBOARDTELEOP.Teleop({
             ros: ros,
             topic: '/base_controller/command'
@@ -768,28 +721,6 @@ function startButton(event) {
 		startRecognition ();
 	}
 }
-/*-------------------------
-        function restartReco() {
-	    	console.log('restart recognition');
- //           recognition.start();
-            noRestartReco = false;
-			recognizing = true;
-			setMicActive ();
-			startRecognition ();
-        }
------------------------*/
- //        var current_style;
- //
- //       function showButtons(style) {
- //           if (style == current_style) {
- //               return;
- //           }
- //           current_style = style;
- //           copy_button.style.display = style;
- //           email_button.style.display = style;
- //           copy_info.style.display = 'none';
- //           email_info.style.display = 'none';
- //       }
 
 		function sendTwistMessage(xMove, zMove) {
 			var reps = 0;
@@ -825,7 +756,7 @@ function startButton(event) {
 			}
 			function publishCmd() {
 				if (!stopMotion) {
-					console.log ("repeating twist " + reps);
+					//console.log ("repeating twist " + reps);
 					cmdVel.publish (twist);
 					if (reps > 1) {
 						setTimeout (publishCmd, repeatInterval);
@@ -835,42 +766,46 @@ function startButton(event) {
 			}
 		}
 		
+		function twistNoRepeat (xMove, zMove) {
+			sendTwistMessage (xMove, zMove);
+			g_repeatableCommand = null;
+		}
 		function arrowUpGo () {
-			sendTwistMessage (linearSpeed, 0.0);
+			twistNoRepeat (linearSpeed, 0.0);
 			addLog ("forward button");
 		}
 		function arrowDownGo () {
-			sendTwistMessage (-linearSpeed, 0.0);
+			twistNoRepeat (-linearSpeed, 0.0);
 			addLog ("back button");
 		}
 		function arrowRightGo () {
-			sendTwistMessage (0, -angularSpeed);	
+			twistNoRepeat (0, -angularSpeed);	
 			addLog ("rotate right button");
 		}
 		function arrowLeftGo () {
-			sendTwistMessage (0, angularSpeed);
+			twistNoRepeat (0, angularSpeed);
 			addLog ("rotate left button");
 		}
 		function fwdTurnLeft () {
-			sendTwistMessage (linearSpeed, angularSpeed);
+			twistNoRepeat (linearSpeed, angularSpeed);
 			addLog ("Forward turn left button");
 		}
 		function fwdTurnRight () {
-			sendTwistMessage (linearSpeed, -angularSpeed);
+			twistNoRepeat (linearSpeed, -angularSpeed);
 			addLog ("Forward turn right button");
 		}
 		function backTurnLeft () {
-			sendTwistMessage (-linearSpeed, -angularSpeed);
+			twistNoRepeat (-linearSpeed, -angularSpeed);
 			addLog ("Back turn left button");
 		}
 		function backTurnRight () {
-			sendTwistMessage (-linearSpeed, angularSpeed);
+			twistNoRepeat (-linearSpeed, angularSpeed);
 			addLog ("Back turn right button");
 		}
 		function stopButton () {
 			stopMotion = true;
 			cancelRobotMove ();
-			sendTwistMessage (0.0, 0.0);
+			twistNoRepeat (0.0, 0.0);
 			addLog ("stop button");
 		}
 		function arrowMotionStop () {
@@ -1114,11 +1049,19 @@ function startButton(event) {
 				}
 				console.log (statusString);
 			}
-			// moveClient.cancel ();  this does not stop the damn messages anyhow
 		});
+		
+		goal.on('result', function(result) {
+			console.log ('Move to pose result: ' + JSON.stringify(result));
+			sendMarker (feedback);
+		});
+			
+		goal.on('feedback', function(feedback) {
+			console.log ('Move to pose feedback: ' + JSON.stringify(feedback));
+		});
+			
 		goal.send();
 		console.log ('moveRobotToPose goal sent, movepose: ' + JSON.stringify (movePose));
-
 	}
 	
 	function moveRobotFromPose (distance, angle) {
@@ -1159,7 +1102,7 @@ function startButton(event) {
 			
 			goal.on('status', function(status) {
 				statusCount++;
-				statusString = 'Move robot status: ' + JSON.stringify(status);
+				statusString = 'Move FromPose status: ' + JSON.stringify(status);
 				if (statusString !== prevStatus) {
 					prevStatus = statusString;
 					if (status.status == 4) {
@@ -1167,22 +1110,44 @@ function startButton(event) {
 					}
 					console.log (statusCount + ": " + statusString);
 				}
-				// moveClient.cancel ();  this does not stop the damn messages
 			});
-					/********		This never seems to be called!
-							goal.on('result', function(result) {
-								console.log ('Move robot result: ' + JSON.stringify(result));
-								console.log ("Result: " + JSON.stringify (result));
-								moveClient.cancel ();
-							});
-					******************/
+
+			goal.on('result', function(result) {
+				console.log ('Move FromPose result: ' + JSON.stringify(result));
+			});
+			
+			goal.on('feedback', function(feedback) {
+				console.log ('Move FromPose feedback: ' + JSON.stringify(feedback));
+				sendMarker (feedback);
+			});
+			
+/*
+	Move to pose feedback looks like this: 
+	{"base_position":
+		{"header":
+			{"stamp":
+				{"secs":1022,
+				 "nsecs":600000000
+				},
+			"frame_id":"map",
+			"seq":0},
+		"pose":
+			{"position":
+				{"y":2.3130476097425627,
+				 "x":2.036709309305331,
+				 "z":0},
+			 "orientation":{"y":0,"x":0,"z":0.5107545852738863,"w":0.8597265574714442}
+			}
+		}
+	}
+*/	
+
 			goal.send();
-			console.log ('moveRobotFromPose goal sent');
+			console.log ('move From Pose goal sent');
 		}
 	}
 	
 	function cancelRobotMove () {
-		var statusString;
 		if (connected) {
 			var moveClient = new ROSLIB.ActionClient({
 				ros : ros,
@@ -1192,6 +1157,60 @@ function startButton(event) {
 			moveClient.cancel ();  //cross fingers and hope?
 		}
 	}
+	
+	function sendMarker () { //(atPose) {
+		var markerTopic = new ROSLIB.Topic({
+				ros: ros,
+				name: "visualization_marker",
+				messageType: "visualization_msgs/Marker" 
+			});
+	
+		var marker = new ROSLIB.Message({
+			header: {
+				frame_id : "base_link",			// or just ""?
+				stamp : {}			
+			},
+			ns: "Commander",
+			id: 0,
+			type: 2,		//visualization_msgs::Marker::SPHERE,
+			action: 0,		//visualization_msgs::Marker::ADD,
+			pose: {
+				position: {
+					x : 1,
+					y : 1,
+					z : 1
+				},
+				orientation: {
+					x : 0.0,
+					y : 0.0,
+					z : 0.0,
+					w : 1.0
+				}
+			},
+			scale: {
+				x : 0.2,
+				y : 0.2,
+				z : 0.2
+			},
+			color: {
+				a : 1.0, // Don't forget to set the alpha!
+				r : 1.0,
+				g : 1.0,
+				b : 0.0
+			}
+			//text: "Waypoint";
+			//only if using a MESH_RESOURCE marker type:
+			//marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+		});
+			
+	//marker.pose = atPose;
+	if (connected) {
+		console.log ('Sending marker: ' + JSON.stringify(marker));
+		markerTopic.publish (marker);
+	} else {
+		say ("You need to be connected");
+	}
+	}		
 		
 	function paramdump () {
 		console.log ("sending paramdump message");
@@ -1204,6 +1223,10 @@ function startButton(event) {
 			data: 'dump waypoints'
 		});
 		dumpTopic.publish (pdumpMsg);
+	}
+	
+	function testButton () {
+		sendMarker ();
 	}
 
  /*		
@@ -1246,82 +1269,82 @@ function startButton(event) {
 	}
 */	
 		
-	function toggleMute () {
-		muted = !muted;
-		setMuteButton ();
-		localStorage.muted = muted;
-		localStorage.setItem ("muted", (muted?"true":"false"));
-	}
-	
-	function setMuteButton () {
-		if (muted) {
-			document.getElementById ("muteButton").checked = true;	
-		} else {
-			document.getElementById ("muteButton").checked = false;	
-		}
-	}
+function toggleMute () {
+	muted = !muted;
+	setMuteButton ();
+	localStorage.muted = muted;
+	localStorage.setItem ("muted", (muted?"true":"false"));
+}
 
-	function toggleSimulator () {
-		useSimulator = !useSimulator ;
-		setSimulatorButton ();
-		localStorage.setItem ("useSimulator", (useSimulator?"true":"false"));
+function setMuteButton () {
+	if (muted) {
+		document.getElementById ("muteButton").checked = true;	
+	} else {
+		document.getElementById ("muteButton").checked = false;	
 	}
-	
-	function setSimulatorButton () {
-		if (useSimulator) {
-			document.getElementById("simulatorButton").checked = true;
-			document.getElementById("cmdr").innerHTML = "Stage Sim Commander";
-			topicName = '/cmd_vel_mux/input/navi'; 	// topic name for the Stage simulator
-		} else {
-			document.getElementById("simulatorButton").checked = false;		
-			document.getElementById("cmdr").innerHTML = "Robot Commander";
-			topicName = '/cmd_vel'; 
-		}
+}
+
+function toggleSimulator () {
+	useSimulator = !useSimulator ;
+	setSimulatorButton ();
+	localStorage.setItem ("useSimulator", (useSimulator?"true":"false"));
+}
+
+function setSimulatorButton () {
+	if (useSimulator) {
+		document.getElementById("simulatorButton").checked = true;
+		document.getElementById("cmdr").innerHTML = "Stage Sim Commander";
+		topicName = '/cmd_vel_mux/input/navi'; 	// topic name for the Stage simulator
+	} else {
+		document.getElementById("simulatorButton").checked = false;		
+		document.getElementById("cmdr").innerHTML = "Robot Commander";
+		topicName = '/cmd_vel'; 
 	}
-	
-	function toggleWakeup () {
-		useWakeup = !useWakeup;
-		setWakeupButton ();
-		localStorage.useWakeup = useWakeup;
-		localStorage.setItem ("useWakeup", (useWakeup?"true":"false"));
+}
+
+function toggleWakeup () {
+	useWakeup = !useWakeup;
+	setWakeupButton ();
+	localStorage.useWakeup = useWakeup;
+	localStorage.setItem ("useWakeup", (useWakeup?"true":"false"));
+}
+
+function setWakeupButton () {
+	if (!useWakeup) {
+		document.getElementById("wakeupButton").checked = false;	
+	} else {
+		document.getElementById("wakeupButton").checked = true;	
 	}
-	
-	function setWakeupButton () {
-		if (!useWakeup) {
-			document.getElementById("wakeupButton").checked = false;	
-		} else {
-			document.getElementById("wakeupButton").checked = true;	
-		}
+}
+
+function toggleUnrecognized () {
+	showUnrecognized = !showUnrecognized;
+	setshowUnrecognizedButton ();
+	localStorage.showUnrecognized = showUnrecognized;
+	localStorage.setItem ("showUnrecognized", (showUnrecognized?"true":"false"));
+}
+
+function setshowUnrecognizedButton () {
+	if (!showUnrecognized) {
+		document.getElementById("showUnrecognizedButton").checked = false;
+	} else {
+		document.getElementById("showUnrecognizedButton").checked = true;
 	}
-	
-	function toggleUnrecognized () {
-		showUnrecognized = !showUnrecognized;
-		setshowUnrecognizedButton ();
-		localStorage.showUnrecognized = showUnrecognized;
-		localStorage.setItem ("showUnrecognized", (showUnrecognized?"true":"false"));
-	}
-	
-	function setshowUnrecognizedButton () {
-		if (!showUnrecognized) {
-			document.getElementById("showUnrecognizedButton").checked = false;
-		} else {
-			document.getElementById("showUnrecognizedButton").checked = true;
-		}
-	}
-	
-	function openSettings () {
-		document.querySelector('[name="linearSpeed"]').value = linearSpeed * 10;
-		document.querySelector('[name="linOut"]').value ="Linear speed: "+ linearSpeed;
-		document.querySelector('[name="angularSpeed"]').value = angularSpeed * 10;
-		document.querySelector('[name="angOut"]').value = "Angular speed: " + angularSpeed;
-	}
-	
-	function closeSettings () {
-			linearSpeed = document.querySelector('[name="linearSpeed"]').value / 10;
-			angularSpeed = document.querySelector('[name="angularSpeed"]').value / 10;
-			localStorage.setItem ("linearSpeed", linearSpeed.toString());
-			localStorage.setItem ("angularSpeed", angularSpeed.toString());
-	}
+}
+
+function openSettings () {
+	document.querySelector('[name="linearSpeed"]').value = linearSpeed * 10;
+	document.querySelector('[name="linOut"]').value ="Linear speed: "+ linearSpeed;
+	document.querySelector('[name="angularSpeed"]').value = angularSpeed * 10;
+	document.querySelector('[name="angOut"]').value = "Angular speed: " + angularSpeed;
+}
+
+function closeSettings () {
+	linearSpeed = document.querySelector('[name="linearSpeed"]').value / 10;
+	angularSpeed = document.querySelector('[name="angularSpeed"]').value / 10;
+	localStorage.setItem ("linearSpeed", linearSpeed.toString());
+	localStorage.setItem ("angularSpeed", angularSpeed.toString());
+}
 	
 function closeConnectAdvice () {
 	showMotionArrows();
@@ -1336,8 +1359,6 @@ function showConnectionAdvice() {
 	document.getElementById("motion").style.display = "none";
 	document.getElementById("connection").style.display = "block";
 }
-
-
 
 
 /*******************************************************************************
@@ -1368,7 +1389,7 @@ function toggleInnerDropdown() {
 
 // Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {
-  console.log ("Click event.target id is " + event.target.id);
+  //console.log ("Click event.target id is " + event.target.id);
   if ((event.target.id != "ddmenu")&&(event.target.id != "settings")&&(event.target.id != "muteButton")
 	 &&(event.target.id != "showUnrecognizedButton") &&(event.target.id != "simulatorButton") &&(event.target.id != "wakeupButton" )) { // was but did not work: (!event.target.matches('.dropbtn') && !event.target.matches('.fa fa-bars')) {
 	var dd = document.getElementById("myDropdown");
