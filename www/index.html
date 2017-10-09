@@ -54,7 +54,7 @@
 		<!--    	<label for="robotUrlEntry" class="control-label col-xs-1" style="font-size:16px;">URL:</label>-->
 		    	<div class="col-xs-8">
 		        	<input type="url" name="url" id="robotUrlEntry" class="form-control" 
-						style="font-size:16px; font-weight:bold" placeholder="wss://"  />
+						style="font-size:16px; font-weight:bold" placeholder="0.0.0.0"  />
 		    	</div>
 				<div class="col-xs-4">
 					<button type="button" id="connectButton" class="btn btn-primary" onclick="connect()">
@@ -69,14 +69,14 @@
 		
 	<div id="connection"  class="container-fluid urlHelp" style="display:block;">
 		<H4> Connect to the Robot</H4>
-		<p>Rosbridge must be running on the robot. Enter the robot's URL above, then press Connect.  The URL must begin with
-			ws:// or wss:// (Ubiquity robots use wss), and must end with
-			a colon and a port number--usually 9090.<br>
+		<p>Enter the robot's IP address above, then press <strong>Connect</strong>.  You don't need to give a 
+			port number; the default is 9090.<br>
 			<strong>Examples:</strong><br>
-			<strong>ws://192.168.10.25:9090</strong><br>
-			<strong>wss://10.0.1.100:9090</strong><br>
+			<strong>10.0.1.100</strong><br>
 			or, if your network allows names,<br>
-			<strong>wss://robbie.local:9090</strong>
+			<strong>robbie.local</strong><br>
+			This overrides the websocket and port:<br>
+			<strong>wss://10.0.1.100:9099</strong><br>
 		</p>
 		<div class="text-right"> 
 			<button type="button" class="btn btn-success btn-sm" onclick="closeConnectAdvice()">Close</button>

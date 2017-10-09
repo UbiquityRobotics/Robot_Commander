@@ -10,7 +10,7 @@ var recognizing = false;
 var total_recognized = 0;
 //  var noRestartReco;
 var startTimestamp;
-var ros;						// this will be the connection to Ros
+var ros;						// this will be the connection to ROS
 var topicName = '/cmd_vel';     					// topic name for the UR robots
 //	var topicName = '/cmd_vel_mux/input/navi';     		// topic name for the Stage simulator
 //	var topicName = '/turtle1/cmd_vel'; 	    		// this allows testing with turtlesim
@@ -24,7 +24,7 @@ var robotUrl;
 var muted = false;
 var wakeup = ["robot", "loki", "magni"];
 var useWakeup = false;
-var showUnrecognized = false;
+var showUnrecognized = true;
 var infoMsg;
 var useSimulator = false;
 var mic, micSlash, micBg;
@@ -72,7 +72,7 @@ function initialize() {
 	if (localStorage.robotUrl !== undefined) {
 		temp = localStorage.robotUrl;		// use the last robot address
 	} else {
-		temp = "wss://" + location.hostname + ":9090";  //guess at it
+		temp = "ws://" + location.hostname + ":9090";  //guess at it
 	}
 	document.getElementById("robotUrlEntry").value = temp;
 	
@@ -98,14 +98,14 @@ function initialize() {
 	
 	linearSpeed = localStorage.getItem("linearSpeed");
 	if (linearSpeed == undefined || linearSpeed == null) {
-		linearSpeed = 1.0
+		linearSpeed = 0.4
 	} else {
 		linearSpeed = parseFloat(linearSpeed, 1.0)
 	}
 	
 	angularSpeed = localStorage.getItem("angularSpeed");
 	if (angularSpeed == undefined || angularSpeed == null) {
-		angularSpeed = 1.0
+		angularSpeed = 0.4
 	} else {
 		angularSpeed = parseFloat(angularSpeed, 1.0)
 	}
@@ -257,7 +257,7 @@ function rosConnect(robotUrl) {
 		 //alert (JSON.stringify(error));
 		 bootbox.alert ({
 			 title: 'Connection Failure',
-			 message: 'Error connecting to websocket server. ' + error,
+			 message: 'Error connecting to websocket server. Check that Rosbridge is running on the robot.',
 			 className: 'bootbox-msg'
 		 });
 	});
@@ -285,21 +285,27 @@ function connect () {
 		ros.close();
 	} else {
 		robotUrl = document.getElementById("robotUrlEntry").value.trim();
+		robotUrl = robotUrl.replace(/\s+/g, '');				//removes whitespace
 		if (robotUrl === '') {
-			bootbox.alert ("Please supply the robot's URL and port");
+			bootbox.alert ("Please supply the robot's IP address");
 			return;
 		} 
 		//robotUrl = "ws://10.0.0.21:9090"		// for testing
 		//robotUrl = "ws://george.local:9090"	// for testing
-		robotUrl = robotUrl.replace("https:", "wss:");
+		// normalize the addressrobotUrl = robotUrl.replace("https:", "wss:");
 		robotUrl = robotUrl.replace("http:", "ws:");
-		if ((robotUrl.slice (0,5) != "wss://") && (robotUrl.slice (0,4) != "ws://") &&
-				(robotUrl.charAt(robotUrl.length - 5) != ":")) {
-			bootbox.alert 
-				("The robot's URL should begin with http, https, ws, or wss, " + 
-					"and end with a port number, like ':9090'.");
-			return;
+		if ((robotUrl.slice (0,6) != "wss://") && (robotUrl.slice (0,5) != "ws://")) {
+			robotUrl = "ws://" + robotUrl
 		}
+		if (robotUrl.charAt(robotUrl.length - 5) != ":") {
+			robotUrl = robotUrl + ":9090"
+		}	
+			/*bootbox.alert 
+				("The robot's URL should begin with http, https, ws, or wss, " + 
+					"and end with a port number, like ':9090'.");*/
+					
+		document.getElementById("robotUrlEntry").value = robotUrl;	
+		// handle local addresses
 		locaddr = robotUrl.substr(0, robotUrl.length-5);		// get rid of port
 		port = robotUrl.substr(robotUrl.length-5, 5);
 		if (locaddr.startsWith ("ws://")) {
@@ -393,8 +399,10 @@ function startRecognition () {
 			if (isNaN (howmany)) {
 				if (quantity == "to" || quantity == "too") {
 					howmany = 2;
-				} else if (quantity == "for") {
+				} else if (quantity == "for" || quantity == "four") {
 					howmany = 4;
+				} else if (quantity == "one") {
+					howmany = 1;
 				} else {
 					return 0;
 				}
@@ -446,7 +454,6 @@ function startRecognition () {
 			testCandidate: switch (words [0]){
 				case 'forward':
 				case 'foreword':
-				case 'keep going':
 				case 'ahead':
 				case 'advance':
 				case 'straight':
@@ -460,6 +467,14 @@ function startRecognition () {
 						if (dist > 0) {
 							moveRobotFromPose (dist, 0);		// move dist meters 
 						}
+					} else {
+						commandFound = false;
+					}
+					break testCandidate;
+				case 'keep':
+					if (words.length == 2 && words[1] == "going") {			
+						x = linearSpeed;
+						sendTwistMessage (x, z);
 					} else {
 						commandFound = false;
 					}
@@ -645,7 +660,11 @@ function startRecognition () {
 		
 		console.log (allResults);
 		if (commandFound) {								// publish the command
-			commands = candidate + " (alt. #" + (altNumber + 1) + " of " + results.length + ") " + commands;
+			if (altNumber > 1) {
+				commands = candidate + " (alt. #" + (altNumber + 1) + " of " + results.length + ") " + commands;
+			} else {
+				commands = candidate;
+			}
 			commands = commands.slice (0, 50);
 			//final_span.innerHTML = "Commands ["+ total_recognized + "]: "  + commands;
 			//cmd_err_span.innerHTML = "";

@@ -1,0 +1,29 @@
+{
+    "name": "com.jrlandau.robotcmdr",
+    "version": "0.0.7",
+    "displayName": "Robot Commander",
+    "cordova": {
+        "platforms": [
+            "android"
+        ],
+        "plugins": {
+            "com.koalasafe.cordova.plugin.multicastdns": {},
+            "cordova-plugin-app-version": {},
+            "cordova-plugin-device": {},
+            "cordova-plugin-speechrecognition": {},
+            "cordova-plugin-tts": {},
+            "cordova-plugin-whitelist": {},
+            "cordova.plugins.diagnostic": {}
+        }
+    },
+    "dependencies": {
+        "cordova-android": "~6.2.3",
+        "com.koalasafe.cordova.plugin.multicastdns": "https://github.com/stevenpack/phonegap-multicastdns",
+        "cordova-plugin-app-version": "~0.1.9",
+        "cordova-plugin-device": "~1.1.6",
+        "cordova-plugin-speechrecognition": "~1.1.2",
+        "cordova-plugin-tts": "~0.2.3",
+        "cordova-plugin-whitelist": "1",
+        "cordova.plugins.diagnostic": "~3.5.0"
+    }
+}
