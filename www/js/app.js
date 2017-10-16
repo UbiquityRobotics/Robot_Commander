@@ -151,6 +151,7 @@ function initialize() {
 						break;
 					case cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS:
 						console.log("Permission has been permanently denied to use " + permission);
+						permissionRequests.push (permission);
 						break;
 				}
 			}
@@ -1160,9 +1161,8 @@ function startButton(event) {
 		}
 	}
 */	
-
 			goal.send();
-			console.log ('move From Pose goal sent');
+			console.log ('moveRobotFromPose goal sent, message: ' + JSON.stringify (goal.goalMessage));
 		}
 	}
 	
