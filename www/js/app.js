@@ -764,19 +764,21 @@ function startButton(event) {
 					z: zMove*speedFactor
 				}
 			});
-			if ((xMove == 0) && (zMove == 0 )) {
-				reps = 1;
+			if ((xMove == 0) && (zMove == 0 )) {		// it is a stop command
+				reps = 0;
+				cmdVel.publish (twist);
 			} else {
 				reps = Math.max (1, Math.abs (twist.linear.x) > 0 ? linearRepeat : (Math.abs (twist.angular.z) > 0 ? angularRepeat : 1));
 				stopMotion = false;
+				console.log ("Sending Twist x:" + xMove + " z:" + zMove + ", " + reps + " repetitions at " + repeatInterval + " ms. interval");
+				if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
+					publishCmd ();
+				}
 			}
-			console.log ("Sending Twist x:" + xMove + " z:" + zMove + ", " + reps + " repetitions at " + repeatInterval + " ms. interval");
-			if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
-				publishCmd ();
-			}
+			
 			function publishCmd() {
-				if (!stopMotion) {
-					//console.log ("repeating twist " + reps);
+				if (!stopMotion) {					// can be set while command is repeating -- purpose is to stop repitition
+					console.log ("repeating twist " + reps);
 					cmdVel.publish (twist);
 					if (reps > 1) {
 						setTimeout (publishCmd, repeatInterval);
