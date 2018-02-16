@@ -72,7 +72,8 @@ function initialize() {
 	if (localStorage.robotUrl !== undefined) {
 		temp = localStorage.robotUrl;		// use the last robot address
 	} else {
-		temp = "ws://" + location.hostname + ":9090";  //guess at it
+		// temp = "ws://" + location.hostname + ":9090";  // guess at it
+		temp = "ubiquityrobot.local";   				  // use the default
 	}
 	document.getElementById("robotUrlEntry").value = temp;
 	
@@ -320,6 +321,8 @@ function connect () {
 			connectLocal (locaddr);
 		} else {
 			console.log ("connecting to IP " + robotUrl);
+			$("#connectButton").text("Connecting");
+			$('#connectButton').css({"background-color": 'grey'});
 			rosConnect (robotUrl);
 		}
 	}
@@ -335,6 +338,8 @@ function connect () {
 			robotUrl = address;
 			console.log ("local address found, connecting to " + address);
 			rosConnect (address);
+			$("#connectButton").text("Connecting");
+			$("#connectButton").style.background="grey";    	
 			},
 			function (reason) {
 				console.log ("Zeroconf error: " + reason);
@@ -392,7 +397,13 @@ function startRecognition () {
 	}
 	
 	function recogOnresult (results) {
-		console.log('recognition.onresult');
+		console.log("recogOnresult " + results);
+		
+		function isFindable (lookfor) {
+			var lookfors = ["aeroplane","bicycle","bird","boat","bottle","bus","car","cat","chair","cow","diningtable",
+				"dog","horse","motorbike","person","pottedplant","sheep","sofa","train","tvmonitor"];
+			return lookfors.includes(lookfor.toLowerCase());
+		}
 		
 		function getDistance (quantity, what) {
 			var howmany;
@@ -579,6 +590,24 @@ function startRecognition () {
 						commandFound = false;
 					}
 					break testCandidate;
+				case "find":
+					if (words.length == 2) {
+						if (isFindable (words[1])) {
+							findObject (words[1]);
+						} else {
+							say (words [1] + " is not a findable object")
+						}
+					} else if (words.length == 3) {
+						if (isFindable (words[1] + words[2])) {
+							findObject (words[1] + words[2]);
+						} else {
+							say (words [1] + " " + words[2] + " is not a findable object")
+						}
+					} else {
+						say ("The find command must be followed by just one word indicating what to find.")
+					}
+						
+					break testCandidate;	
 				case "help":
 					$('#helpModal').modal('show');
 					break testAllCandidates;
@@ -845,7 +874,7 @@ function startButton(event) {
       // Get the value of a waypoint parameter
 	  // -----------------------------------------------
 	  
-		function getWaypointValue(paramname) {
+		function getWaypointValue (paramname) {
 			return new Promise (function(resolve, reject) {
 				var waypoint = new ROSLIB.Param({
 					ros : ros,
@@ -924,7 +953,7 @@ function startButton(event) {
 				ros : ros,
 				name : '' 
 				});
-				waypoint.name = "waypoint/" + waypointName;
+				waypoint.name = "/waypoint/" + waypointName;
 				waypoint.get(function(value) {
 					if  (!value) {
 						say ('Waypoint ' + waypointName + ' was not found');
@@ -952,7 +981,7 @@ function startButton(event) {
 			if (connected) {
 				var waypoint = new ROSLIB.Param({
 					ros : ros,
-					name : "waypoint/" + waypointName 
+					name : "/waypoint/" + waypointName 
 				});
 				function setWaypointParam (location) {
 					console.log ("Set waypoint " + waypoint.name + ": " + location);
@@ -971,7 +1000,7 @@ function startButton(event) {
 	    	if (connected) {
 				var waypoint = new ROSLIB.Param({
 					ros : ros,
-					name : "waypoint/" + waypointName 
+					name : "/waypoint/" + waypointName 
 				});
 			// console.log ("Set waypoint " + waypoint.name + ": 0 ");
 			waypoint.set("0");
@@ -1046,7 +1075,7 @@ function startButton(event) {
 		var moveToPoseClient = new ROSLIB.ActionClient({
 			// object with following keys: * ros - the ROSLIB.Ros connection handle * serverName - the action server name * actionName - the action message name * timeout - the timeout length when connecting to the action server
 			ros : ros,
-		    serverName : 'move_base',
+		    serverName : '/move_base',
 		    actionName : 'move_base_msgs/MoveBaseAction'  
 		});
                                    
@@ -1057,7 +1086,7 @@ function startButton(event) {
 				    header : {
 					   frame_id : '/map'
 					},
-					pose : movePose			// move_base_msg
+					pose : movePose			
 				}
 		   }
 		});
@@ -1093,7 +1122,7 @@ function startButton(event) {
 			var prevStatus = "";
 			var moveClient = new ROSLIB.ActionClient({
 				ros : ros,
-				serverName : 'move_base',
+				serverName : '/move_base',
 				actionName : 'move_base_msgs/MoveBaseAction'  
 			});
 			function yawToQuaternion(yaw) {
@@ -1172,7 +1201,7 @@ function startButton(event) {
 		if (connected) {
 			var moveClient = new ROSLIB.ActionClient({
 				ros : ros,
-				serverName : 'move_base',
+				serverName : '/move_base',
 				actionName : 'move_base_msgs/MoveBaseAction'  
 			});
 			moveClient.cancel ();  //cross fingers and hope?
@@ -1181,9 +1210,9 @@ function startButton(event) {
 	
 	function sendMarker () { //(atPose) {
 		var markerTopic = new ROSLIB.Topic({
-				ros: ros,
-				name: "visualization_marker",
-				messageType: "visualization_msgs/Marker" 
+				ros : ros,
+				name : "/visualization_marker",
+				messageType : "visualization_msgs/Marker" 
 			});
 	
 		var marker = new ROSLIB.Message({
@@ -1197,7 +1226,7 @@ function startButton(event) {
 			action: 0,		//visualization_msgs::Marker::ADD,
 			pose: {
 				position: {
-					x : 1,
+				x : 1,
 					y : 1,
 					z : 1
 				},
@@ -1233,11 +1262,32 @@ function startButton(event) {
 	}
 	}		
 		
+	function findObject (whatToFind) {			// find an object by looking around
+		var findObj = new ROSLIB.Service({
+			ros : ros,
+			name : "/rotate",
+			serviceType : "dnn_rotate/StringTrigger"
+		});
+	 
+		var lookfor = new ROSLIB.ServiceRequest ({
+			object : "nothing"
+		  });
+
+		lookfor.object = whatToFind;
+		findObj.callService(lookfor, function (result) {
+			console.log('Result for service call to find object '
+			  + lookfor.object
+			  + ': '
+			  + result.response);
+			say (result.response);
+		  });
+	}				
+		
 	function paramdump () {
 		console.log ("sending paramdump message");
 		var dumpTopic = new ROSLIB.Topic({
 			ros : ros,
-			name : 'paramdump',
+			name : '/paramdump',
 			messageType : 'std_msgs/String'
 		});
 		var pdumpMsg = new ROSLIB.Message({
