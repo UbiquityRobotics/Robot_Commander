@@ -441,6 +441,8 @@ function startRecognition () {
 		var altNumber;		
 		
 		//	if (recognition.continuous == true)	{recognition.stop ()}	
+		
+		getBattery ()  ;
 									
 		testAllCandidates:
 		for (var i = 0; i < results.length; ++i) {
@@ -1298,6 +1300,27 @@ function startButton(event) {
 	
 	function testButton () {
 		sendMarker ();
+	}
+	
+	function getBattery () {	
+      
+		var batTopic = new ROSLIB.Topic({
+			ros         : ros,
+			name        : '/battery_state',
+			messageType : 'sensor_msgs/BatteryState' 
+		});
+      
+		batTopic.subscribe (function(message) {
+     
+			var batMsg = JSON.stringify(message.header)
+			  + ', voltage: ' + message.voltage;
+			
+			batTopic.unsubscribe();  
+			console.log ('Received message on ' + batTopic.name + ': #' + message.header.seq);
+			console.log (batMsg);
+			
+			//batCallback ();
+		});
 	}
 
  /*		
