@@ -441,9 +441,7 @@ function startRecognition () {
 		var altNumber;		
 		
 		//	if (recognition.continuous == true)	{recognition.stop ()}	
-		
-		getBattery ()  ;
-									
+			
 		testAllCandidates:
 		for (var i = 0; i < results.length; ++i) {
 			candidate = results[i].toLowerCase().trim();
@@ -609,7 +607,10 @@ function startRecognition () {
 						say ("The find command must be followed by just one word indicating what to find.")
 					}
 						
-					break testCandidate;	
+					break testCandidate;
+				case "battery":
+					getBattery ();
+					break testAllCandidates;
 				case "help":
 					$('#helpModal').modal('show');
 					break testAllCandidates;
@@ -1302,25 +1303,35 @@ function startButton(event) {
 		sendMarker ();
 	}
 	
-	function getBattery () {	
-      
-		var batTopic = new ROSLIB.Topic({
-			ros         : ros,
-			name        : '/battery_state',
-			messageType : 'sensor_msgs/BatteryState' 
-		});
-      
-		batTopic.subscribe (function(message) {
-     
-			var batMsg = JSON.stringify(message.header)
-			  + ', voltage: ' + message.voltage;
-			
-			batTopic.unsubscribe();  
-			console.log ('Received message on ' + batTopic.name + ': #' + message.header.seq);
-			console.log (batMsg);
-			
-			//batCallback ();
-		});
+	function getBattery () {
+		if (connected) {
+			var myNamespace = {};
+			myNamespace.round = function(number, precision) {
+				var factor = Math.pow(10, precision);
+				var tempNumber = number * factor;
+				var roundedTempNumber = Math.round(tempNumber);
+				return roundedTempNumber / factor;
+			};
+
+			var batTopic = new ROSLIB.Topic({
+				ros         : ros,
+				name        : '/battery_state',
+				messageType : 'sensor_msgs/BatteryState' 
+			});
+		  
+			batTopic.subscribe (function (message) {
+				var shortvolts = myNamespace.round(message.voltage, 2); 
+				var batMsg = JSON.stringify(message.header)
+				  + ', voltage: ' + message.voltage;
+				
+				batTopic.unsubscribe();  
+				console.log (batMsg);
+				say ("battery voltage is " + shortvolts + " volts ");
+			});
+		
+		} else {
+			say ("You need to be connected");
+		}
 	}
 
  /*		
