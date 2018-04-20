@@ -3,7 +3,13 @@
 /* exported setMicInactive,setMicOff,connect,startButton,arrowUp,arrowDown,arrowRight,arrowLeft,stopButton,mute,toggleWakeup,toggleSimulator,toggleUnrecognized,toggleDropdown*/
 document.addEventListener("deviceready", initialize, false);
 
-
+var myNamespace = {};
+	myNamespace.round = function(number, precision) {
+		var factor = Math.pow(10, precision);
+		var tempNumber = number * factor;
+		var roundedTempNumber = Math.round(tempNumber);
+		return roundedTempNumber / factor;
+	};
 var connected=false;
 var recognizing = false;
 //    var recognition;
@@ -24,7 +30,7 @@ var robotUrl;
 var muted = false;
 var wakeup = ["robot", "loki", "magni"];
 var useWakeup = false;
-var showUnrecognized = true;
+var showUnrecognized = false;
 var infoMsg;
 var useSimulator = false;
 var mic, micSlash, micBg;
@@ -51,7 +57,7 @@ function addLog(text, textColor) {
 	var row = table.insertRow(0);
 	var cell1 = row.insertCell(0);
 	if (textColor) {
-		cell1.style.color = "red";
+		cell1.style.color = textColor;
 	}
 	cell1.innerHTML = text;
 }
@@ -190,7 +196,169 @@ function initialize() {
 	}
 }	
 
+//================Use Dialogflow for natural language processsing ========================
 
+var accessToken = "fd1386d4293d422db8a63889dc2e4f71",
+	dialogflowUrl = "https://api.api.ai/v1/",
+	messageRecording = "Recording...",
+	messageCouldntHear = "I couldn't hear you, would you say that again?",
+	messageInternalError = "Oh darn, there has been an internal server error",
+	messageSorry = "I'm sorry, I don't have the answer to that.";
+  
+function sendSpeech (spch) {
+   $.ajax({
+	type: "POST",
+	url: dialogflowUrl + "query",
+	contentType: "application/json; charset=utf-8",
+	dataType: "json",
+	headers: {
+	  "Authorization": "Bearer " + accessToken
+	},
+	data: JSON.stringify({query: spch, lang: "en", sessionId: "UbiquityRobotics"}),
+
+	success: function(data) {
+	  prepareResponse (data);
+	},
+	error: function() {
+	  respond (messageInternalError);
+	}
+  });
+} 
+  
+function prepareResponse (resp) {
+	
+	if (resp.status.errorType == "success") {
+		var action = resp.result.action.split(".");		//yields array of the string separated by dot
+		var dist = 0;
+		testAction: switch (action[0]){
+			case 'forward':
+			var amount = resp.result.parameters["unit-length"].amount;
+			var unit = resp.result.parameters["unit-length"].unit;	
+				if (amount && unit) {
+					dist = getDistance (amount, unit);			// accept meters, meters
+					if (dist > 0) {
+						moveRobotFromPose (dist, 0);		// move dist meters 
+						addLog ("forward " + dist + " meters.", "green")
+					}
+				} else {
+					sendTwistMessage (linearSpeed, 0);
+					addLog ("forward", "green")
+					return true;
+				}
+				break testAction;
+				
+			case "backward":
+				var amount = resp.result.parameters["unit-length"].amount;
+				var unit = resp.result.parameters["unit-length"].unit;	
+				if (amount && unit) {
+					dist = -getDistance (amount, unit);			// accept meters, meters
+					if (dist < 0) {
+						moveRobotFromPose (dist, 0);		// move dist meters 
+						addLog ("backward" + dist + " meters.", "green")
+					}
+				} else {
+					sendTwistMessage (-linearSpeed, 0);
+					addLog ("backward", "green")
+				}
+				return true;
+				break testAction;
+			
+			case "rotate":
+				var leftright = resp.result.parameters.leftright;
+				var angle = resp.result.parameters.angle;
+				var angleUnit = resp.result.parameters.angleunit;
+				if (leftright && angle && angleUnit) {
+					dist = getDistance (angle, angleUnit);
+					if (leftright == "right") { dist = -dist };
+					if (dist != 0) {
+						moveRobotFromPose (0, dist);
+						addLog ("rotate " + leftright +" "+ myNamespace.round (dist, 2) + " radians.", "green");
+					}
+				} else {
+					dist = angularSpeed;
+					if (leftright = "right") { dist = -dist };
+					sendTwistMessage (0, dist);
+					addLog ("rotate " + leftright, "green")
+				}
+				return true;
+				break testAction;
+				
+			case "turn":
+				turnswitch: switch (turnmeasure) {
+					case "right":
+						z = -angularSpeed;
+						break turnswitch;
+					case "left":
+						z = angularSpeed;
+						break turnswitch;
+					case "around":
+					case "round":
+						moveRobotFromPose (0, -Math.PI);
+						addLog ("turn around", "green")
+						break testAction;	
+				}
+				x = linearSpeed;
+				sendTwistMessage (x, z);
+				addLog ("turn " + turnmeasure, "green");
+				break testAction;	
+				
+			case "stop":	
+				stopRobot ();
+				addLog ("stop ", "green");
+				break testAction;
+				
+			case "faster":	
+				fasterBot ();
+				addLog ("faster", "green");
+				break testAction;
+			case "slower":	
+				slowerBot ();
+				addLog ("slower ", "green");
+				break testAction;		
+				
+			case "smalltalk":
+				if (resp.result.action == "smalltalk.greetings.how_are_you" || resp.result.action == "smalltalk.greetings.whatsup") {
+					getBattery (batok, batfail);
+				} else {
+					say (resp.result.speech)
+				}
+				return true;
+				break testAction;
+				
+				function batok (percent) {
+					if (percent >= 70) {
+						say (resp.result.speech + ". " + "My battery charge is " + percent + "%");
+					} else {
+						say ("Not so good. " + "My battery chargge is only " + percent + "%");
+					}
+				}	
+				
+				function batfail (batMsg) {
+					say (batMsg);
+				}
+				
+			default:
+				addLog ("?" + resp.result.resolvedQuery.slice (0, 50), "red");
+				say (resp.result.speech);
+				return false;
+			}
+		}
+}
+
+function respond (response) {
+	if (response == "") {
+		response = messageSorry;
+	}
+	say (response);
+}
+  
+// ---------------------end of Dialogflow interface------------------ 
+
+function networkConnected() {
+    var networkState = navigator.connection.type;
+	return (networkState != Connection.NONE);
+}
+  
 function say (words) {
 	var wasRecognizing = false;
 //		var stowabool;
@@ -229,6 +397,36 @@ function say (words) {
 	}
 }
 
+function getDistance (quantity, units) {
+	// converts distances to meters, angles to radians
+	var howmany;
+	howmany = Number(quantity);
+	if (isNaN (howmany)) {
+		if (quantity == "to" || quantity == "too") {
+			howmany = 2;
+		} else if (quantity == "for" || quantity == "four") {
+			howmany = 4;
+		} else if (quantity == "one") {
+			howmany = 1;
+		} else {
+			return 0;
+		}
+	}
+	if (units == "meters" || units == "meter" || units == "m") {
+		return (howmany);
+	} else if (units == "centimeters" || units == "centimeter" || units == "cm") {
+		return howmany * 0.01;	
+	} else if (units == "feet" || units == "foot" || units == "ft") {
+		return howmany * 0.3048;
+	} else if (units == "inch" || units == "inches" || units == "in") {
+		return howmany * 0.0254;				// converts inches to meters
+	} else if (units == "degrees" || units == "degree") {
+		return howmany * Math.PI / 180;			// convert to radians
+	} else {
+		return 0;
+	}	
+}
+		
 function rosConnect(robotUrl) {
 	ros = new ROSLIB.Ros({						// Connecting to ROS.
 		url: robotUrl 							
@@ -259,9 +457,11 @@ function rosConnect(robotUrl) {
 		 //alert (JSON.stringify(error));
 		 bootbox.alert ({
 			 title: 'Connection Failure',
-			 message: 'Error connecting to websocket server. Check that Rosbridge is running on the robot.',
+			 message: 'Error connecting to websocket server at ' + robotUrl + '. Check that Rosbridge is running on the robot.',
 			 className: 'bootbox-msg'
 		 });
+		$("#connectButton").text("Connect");		// restore the button
+		$('#connectButton').css({"background-color": 'blue'});
 	});
 
 	ros.on('close', function() {
@@ -286,7 +486,7 @@ function connect () {
 	if (connected) {			// disconnect
 		ros.close();
 	} else {
-		robotUrl = document.getElementById("robotUrlEntry").value.trim();
+		robotUrl = document.getElementById("robotUrlEntry").value.toLowerCase().trim();
 		robotUrl = robotUrl.replace(/\s+/g, '');				//removes whitespace
 		if (robotUrl === '') {
 			bootbox.alert ("Please supply the robot's IP address");
@@ -355,11 +555,15 @@ function connect () {
 }
 
 function startRecognition () {
+	if (!networkConnected () ) {
+		say ("I have no internet connection");
+		return;
+	}
     window.plugins.speechRecognition.startListening (
 		recogSuccess, 
 		recogError, 
 		{language: "en-US",
-		 matches: 10,
+		 matches: 5,
 		 prompt: "Listening",
 		 showPopup: true,
 		 showPartial: false
@@ -405,40 +609,14 @@ function startRecognition () {
 			return lookfors.includes(lookfor.toLowerCase());
 		}
 		
-		function getDistance (quantity, what) {
-			var howmany;
-			howmany = Number(quantity);
-			if (isNaN (howmany)) {
-				if (quantity == "to" || quantity == "too") {
-					howmany = 2;
-				} else if (quantity == "for" || quantity == "four") {
-					howmany = 4;
-				} else if (quantity == "one") {
-					howmany = 1;
-				} else {
-					return 0;
-				}
-			}
-			if (what == "meters" || what == "meter") {
-				return (howmany);
-			} else if (what == "centimeters" || what == "centimeter") {
-				return howmany * 0.01;	
-			} else if (what == "feet" || what == "foot") {
-				return howmany * 0.3048;			// converts feet to meters
-			} else if (what == "degrees" || what == "degree") {
-				return howmany * Math.PI / 180;		// convert to radians
-			} else {
-				return 0;
-			}	
-		}
-		
+	
 		var commands = '';
 		var x = 0, y = 0, z = 0; 		// linear x and y movement and angular z movement
 		var commandFound = false;
 		var candidate, topCandidate = "";		
 		var allResults = "";
-		var dist = 0;
-		var altNumber;		
+		var dist = 0;		// distance
+		var altNumber;		// which of the alternatives was recognized as a command
 		
 		//	if (recognition.continuous == true)	{recognition.stop ()}	
 			
@@ -562,34 +740,29 @@ function startRecognition () {
 					break testCandidate;
 				case "stop":
 				case "halt":
-					stopMotion = true;
-					sendTwistMessage (0, 0);
-					cancelRobotMove ();
+					stopRobot ();
 					break testCandidate;
 				case "faster":
-					speedFactor *= 1.1;
-					//speed_span.innerHTML = "Speed factor " + speedFactor.toFixed(2); 
+					fasterBot ();
 					break testCandidate;
 				case "speed":
 					if (words [1] == "up") {
-						speedFactor *= 1.1;
-					//	speed_span.innerHTML = "Speed factor " + speedFactor.toFixed(2); 
+						fasterBot ();
 					} else {
 						commandFound = false;
 					}
 					break testCandidate;
 				case "slower":
-					speedFactor /= 1.1;
-					//speed_span.innerHTML = "Speed factor " + speedFactor.toFixed(2); 
+					slowerBot ();
 					break testCandidate;
 				case "slow":
 					if (words [1] == "down") { 
-						speedFactor /= 1.1;
-					//	speed_span.innerHTML = "Speed factor " + speedFactor.toFixed(2); 
+						slowerBot ();
 					} else {
 						commandFound = false;
 					}
 					break testCandidate;
+
 				case "find":
 					if (words.length == 2) {
 						if (isFindable (words[1])) {
@@ -606,10 +779,16 @@ function startRecognition () {
 					} else {
 						say ("The find command must be followed by just one word indicating what to find.")
 					}
-						
 					break testCandidate;
 				case "battery":
-					getBattery ();
+					getBattery (batok, batfail);
+					function batok (batv) {
+						say ("The battery charge is " + batv + " percent");
+					}	
+					
+					function batfail (batMsg) {
+						say (batMsg);
+					}
 					break testAllCandidates;
 				case "help":
 					$('#helpModal').modal('show');
@@ -691,29 +870,36 @@ function startRecognition () {
 		}
 		}		// end of for loop
 		
-		console.log (allResults);
-		if (commandFound) {								// publish the command
-			if (altNumber > 1) {
-				commands = candidate + " (alt. #" + (altNumber + 1) + " of " + results.length + ") " + commands;
-			} else {
-				commands = candidate;
-			}
-			commands = commands.slice (0, 50);
-			//final_span.innerHTML = "Commands ["+ total_recognized + "]: "  + commands;
-			//cmd_err_span.innerHTML = "";
-			total_recognized++;
-			addLog (commands);
-			
-		// Research: Keep count of how often we used the first result
-			if (altNumber == 0) {
-				localStorage.firstResultOK = Number(localStorage.firstResultOK) + 1;
-			} else {
-				localStorage.otherResultOK = Number(localStorage.otherResultOK) + 1;
-			} 
-			console.log ("First answer recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
-				(Number(localStorage.firstResultOK) + Number(localStorage.otherResultOK))).toFixed(2) + "%");
-		} else if (showUnrecognized && (allResults != "")) {
+		if (!commandFound && networkConnected ()) {
+			// Use Dialogflow to determine the user's wish
+			sendSpeech (results[0]) 
+		} else {
+	
+			console.log (allResults);
+			if (commandFound) {								// publish the command
+				if (altNumber > 1) {
+					commands = candidate + " (alt. #" + (altNumber + 1) + " of " + results.length + ") " + commands;
+				} else {
+					commands = candidate;
+				}
+				commands = commands.slice (0, 50);
+				//final_span.innerHTML = "Commands ["+ total_recognized + "]: "  + commands;
+				//cmd_err_span.innerHTML = "";
+				total_recognized++;
+				addLog (commands);
+				
+			// Research: Keep count of how often we used the first result
+				if (altNumber == 0) {
+					localStorage.firstResultOK = Number(localStorage.firstResultOK) + 1;
+				} else {
+					localStorage.otherResultOK = Number(localStorage.otherResultOK) + 1;
+				} 
+				console.log ("First answer recognition rate is " + ((100 * Number(localStorage.firstResultOK)) /
+					(Number(localStorage.firstResultOK) + Number(localStorage.otherResultOK))).toFixed(2) + "%");
+			} else if (showUnrecognized && (allResults != "")) {
 				addLog ("? " + allResults, "red");
+				say ("I didn't understand and have no network connection");
+			}
 		}
 	}	// end of recogOnresult
 }   // end of function startRecognition
@@ -774,97 +960,95 @@ function startButton(event) {
 	}
 }
 
-		function sendTwistMessage(xMove, zMove) {
-			var reps = 0;
-			// linear x and y movement and angular z movement
-			
-			var cmdVel = new ROSLIB.Topic({
-				ros : ros,
-				name : topicName,
-				messageType : 'geometry_msgs/Twist'
-			});
+function sendTwistMessage(xMove, zMove) {
+	var reps = 0;
+	// linear x and y movement and angular z movement
 	
-			var twist = new ROSLIB.Message({
-				linear: {
-					x: xMove*speedFactor,
-					y: 0.0,
-					z: 0.0
-				},
-				angular: {
-					x: 0.0,
-					y: 0.0,
-					z: zMove*speedFactor
-				}
-			});
-			if ((xMove == 0) && (zMove == 0 )) {		// it is a stop command
-				reps = 0;
-				cmdVel.publish (twist);
-			} else {
-				reps = Math.max (1, Math.abs (twist.linear.x) > 0 ? linearRepeat : (Math.abs (twist.angular.z) > 0 ? angularRepeat : 1));
-				stopMotion = false;
-				console.log ("Sending Twist x:" + xMove + " z:" + zMove + ", " + reps + " repetitions at " + repeatInterval + " ms. interval");
-				if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
-					publishCmd ();
-				}
+	var cmdVel = new ROSLIB.Topic({
+		ros : ros,
+		name : topicName,
+		messageType : 'geometry_msgs/Twist'
+	});
+
+	var twist = new ROSLIB.Message({
+		linear: {
+			x: xMove*speedFactor,
+			y: 0.0,
+			z: 0.0
+		},
+		angular: {
+			x: 0.0,
+			y: 0.0,
+			z: zMove*speedFactor
+		}
+	});
+	if ((xMove == 0) && (zMove == 0 )) {			// it is a stop command
+		reps = 0;
+		cmdVel.publish (twist);
+	} else {
+		reps = Math.max (1, Math.abs (twist.linear.x) > 0 ? linearRepeat : (Math.abs (twist.angular.z) > 0 ? angularRepeat : 1));
+		stopMotion = false;
+		console.log ("Sending Twist x:" + xMove + " z:" + zMove + ", " + reps + " repetitions at " + repeatInterval + " ms. interval");
+		if (typeof cmdVel.ros != "undefined") {			// this would be if we are not connected
+			publishCmd ();
+		}
+	}
+	
+	function publishCmd() {
+		if (!stopMotion) {					// can be set while command is repeating -- purpose is to stop repitition
+		//	console.log ("repeating twist " + reps);
+			cmdVel.publish (twist);
+			if (reps > 1) {
+				setTimeout (publishCmd, repeatInterval);
+				reps = reps - 1;
 			}
-			
-			function publishCmd() {
-				if (!stopMotion) {					// can be set while command is repeating -- purpose is to stop repitition
-					console.log ("repeating twist " + reps);
-					cmdVel.publish (twist);
-					if (reps > 1) {
-						setTimeout (publishCmd, repeatInterval);
-						reps = reps - 1;
-					}
-				}
-			}
 		}
-		
-		function twistNoRepeat (xMove, zMove) {
-			sendTwistMessage (xMove, zMove);
-			g_repeatableCommand = null;
-		}
-		function arrowUpGo () {
-			twistNoRepeat (linearSpeed, 0.0);
-			addLog ("forward button");
-		}
-		function arrowDownGo () {
-			twistNoRepeat (-linearSpeed, 0.0);
-			addLog ("back button");
-		}
-		function arrowRightGo () {
-			twistNoRepeat (0, -angularSpeed);	
-			addLog ("rotate right button");
-		}
-		function arrowLeftGo () {
-			twistNoRepeat (0, angularSpeed);
-			addLog ("rotate left button");
-		}
-		function fwdTurnLeft () {
-			twistNoRepeat (linearSpeed, angularSpeed);
-			addLog ("Forward turn left button");
-		}
-		function fwdTurnRight () {
-			twistNoRepeat (linearSpeed, -angularSpeed);
-			addLog ("Forward turn right button");
-		}
-		function backTurnLeft () {
-			twistNoRepeat (-linearSpeed, -angularSpeed);
-			addLog ("Back turn left button");
-		}
-		function backTurnRight () {
-			twistNoRepeat (-linearSpeed, angularSpeed);
-			addLog ("Back turn right button");
-		}
-		function stopButton () {
-			stopMotion = true;
-			cancelRobotMove ();
-			twistNoRepeat (0.0, 0.0);
-			addLog ("stop button");
-		}
-		function arrowMotionStop () {
-			stopMotion = true;
-		}
+	}
+}
+
+function twistNoRepeat (xMove, zMove) {
+	sendTwistMessage (xMove, zMove);
+	g_repeatableCommand = null;
+}
+function arrowUpGo () {
+	twistNoRepeat (linearSpeed, 0.0);
+	addLog ("forward button");
+}
+function arrowDownGo () {
+	twistNoRepeat (-linearSpeed, 0.0);
+	addLog ("back button");
+}
+function arrowRightGo () {
+	twistNoRepeat (0, -angularSpeed);	
+	addLog ("rotate right button");
+}
+function arrowLeftGo () {
+	twistNoRepeat (0, angularSpeed);
+	addLog ("rotate left button");
+}
+function fwdTurnLeft () {
+	twistNoRepeat (linearSpeed, angularSpeed);
+	addLog ("Forward turn left button");
+}
+function fwdTurnRight () {
+	twistNoRepeat (linearSpeed, -angularSpeed);
+	addLog ("Forward turn right button");
+}
+function backTurnLeft () {
+	twistNoRepeat (-linearSpeed, -angularSpeed);
+	addLog ("Back turn left button");
+}
+function backTurnRight () {
+	twistNoRepeat (-linearSpeed, angularSpeed);
+	addLog ("Back turn right button");
+}
+function stopButton () {
+	stopRobot () ;
+	addLog ("stop button");
+}
+function arrowMotionStop () {
+	stopMotion = true;
+}
 		
 	  // ----------------------------------------------------------------------
       // Waypoints
@@ -1175,27 +1359,27 @@ function startButton(event) {
 				sendMarker (feedback);
 			});
 			
-/*
-	Move to pose feedback looks like this: 
-	{"base_position":
-		{"header":
-			{"stamp":
-				{"secs":1022,
-				 "nsecs":600000000
-				},
-			"frame_id":"map",
-			"seq":0},
-		"pose":
-			{"position":
-				{"y":2.3130476097425627,
-				 "x":2.036709309305331,
-				 "z":0},
-			 "orientation":{"y":0,"x":0,"z":0.5107545852738863,"w":0.8597265574714442}
-			}
-		}
-	}
-*/	
-			goal.send();
+			/*
+				Move to pose feedback looks like this: 
+				{"base_position":
+					{"header":
+						{"stamp":
+							{"secs":1022,
+							 "nsecs":600000000
+							},
+						"frame_id":"map",
+						"seq":0},
+					"pose":
+						{"position":
+							{"y":2.3130476097425627,
+							 "x":2.036709309305331,
+							 "z":0},
+						 "orientation":{"y":0,"x":0,"z":0.5107545852738863,"w":0.8597265574714442}
+						}
+					}
+				}
+			*/	
+			goal.send ();
 			console.log ('moveRobotFromPose goal sent, message: ' + JSON.stringify (goal.goalMessage));
 		}
 	}
@@ -1210,6 +1394,20 @@ function startButton(event) {
 			moveClient.cancel ();  //cross fingers and hope?
 		}
 	}
+	
+function stopRobot () {
+	stopMotion = true;
+	sendTwistMessage (0, 0);
+	cancelRobotMove ();
+}
+
+function fasterBot () {
+	speedFactor *= 1.5;
+}
+
+function slowerBot () {
+	speedFactor /= 1.5;
+}
 	
 	function sendMarker () { //(atPose) {
 		var markerTopic = new ROSLIB.Topic({
@@ -1303,15 +1501,8 @@ function startButton(event) {
 		sendMarker ();
 	}
 	
-	function getBattery () {
+	function getBattery (batVolts, batfail) {  // returns answer as sentence
 		if (connected) {
-			var myNamespace = {};
-			myNamespace.round = function(number, precision) {
-				var factor = Math.pow(10, precision);
-				var tempNumber = number * factor;
-				var roundedTempNumber = Math.round(tempNumber);
-				return roundedTempNumber / factor;
-			};
 
 			var batTopic = new ROSLIB.Topic({
 				ros         : ros,
@@ -1320,17 +1511,16 @@ function startButton(event) {
 			});
 		  
 			batTopic.subscribe (function (message) {
-				var shortvolts = myNamespace.round(message.voltage, 2); 
-				var batMsg = JSON.stringify(message.header)
-				  + ', voltage: ' + message.voltage;
-				
+				var shortvolts = myNamespace.round (message.voltage, 2); 
+				var percentage = 100 * myNamespace.round (message.percentage, 2);
 				batTopic.unsubscribe();  
-				console.log (batMsg);
-				say ("battery voltage is " + shortvolts + " volts ");
+				console.log ("Battery voltage: " + shortvolts + " volts, " + percentage + "%");
+				batVolts (percentage);
+				//("The battery voltage is " + shortvolts + " volts");
 			});
 		
 		} else {
-			say ("You need to be connected");
+			batfail ("You need to be connected");
 		}
 	}
 

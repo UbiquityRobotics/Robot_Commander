@@ -30,5 +30,6 @@
     <plugin name="cordova-plugin-tts" spec="~0.2.3" />
     <plugin name="cordova-plugin-whitelist" spec="1" />
     <plugin name="cordova.plugins.diagnostic" spec="~3.5.0" />
+    <plugin name="cordova-plugin-network-information" spec="^2.0.1" />
     <engine name="android" spec="~6.2.3" />
 </widget>
