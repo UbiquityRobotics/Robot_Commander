@@ -284,22 +284,19 @@ function prepareResponse (resp) {
 				break testAction;
 				
 			case "turn":
-				turnswitch: switch (turnmeasure) {
+				turnswitch: switch (resp.result.parameters.turnmeasure) {
 					case "right":
-						z = -angularSpeed;
+						sendTwistMessage (linearSpeed, -angularSpeed);
 						break turnswitch;
 					case "left":
-						z = angularSpeed;
+						sendTwistMessage (linearSpeed, angularSpeed);
 						break turnswitch;
 					case "around":
 					case "round":
 						moveRobotFromPose (0, -Math.PI);
-						addLog ("turn around", "green")
-						break testAction;	
+						break turnswitch;	
 				}
-				x = linearSpeed;
-				sendTwistMessage (x, z);
-				addLog ("turn " + turnmeasure, "green");
+				addLog ("turn " + resp.result.parameters.turnmeasure, "green");
 				break testAction;	
 				
 			case "stop":	
@@ -313,7 +310,7 @@ function prepareResponse (resp) {
 				break testAction;
 			case "slower":	
 				slowerBot ();
-				addLog ("slower ", "green");
+				addLog ("slower", "green");
 				break testAction;		
 				
 			case "smalltalk":
@@ -1403,57 +1400,59 @@ function stopRobot () {
 
 function fasterBot () {
 	speedFactor *= 1.5;
+	addLog ("Speed factor is " + myNamespace.round (speedFactor, 2);
 }
 
 function slowerBot () {
 	speedFactor /= 1.5;
+	addLog ("Speed factor is " + myNamespace.round (speedFactor, 2);
 }
 	
-	function sendMarker () { //(atPose) {
-		var markerTopic = new ROSLIB.Topic({
-				ros : ros,
-				name : "/visualization_marker",
-				messageType : "visualization_msgs/Marker" 
-			});
-	
-		var marker = new ROSLIB.Message({
-			header: {
-				frame_id : "base_link",			// or just ""?
-				stamp : {}			
-			},
-			ns: "Commander",
-			id: 0,
-			type: 2,		//visualization_msgs::Marker::SPHERE,
-			action: 0,		//visualization_msgs::Marker::ADD,
-			pose: {
-				position: {
-				x : 1,
-					y : 1,
-					z : 1
-				},
-				orientation: {
-					x : 0.0,
-					y : 0.0,
-					z : 0.0,
-					w : 1.0
-				}
-			},
-			scale: {
-				x : 0.2,
-				y : 0.2,
-				z : 0.2
-			},
-			color: {
-				a : 1.0, // Don't forget to set the alpha!
-				r : 1.0,
-				g : 1.0,
-				b : 0.0
-			}
-			//text: "Waypoint";
-			//only if using a MESH_RESOURCE marker type:
-			//marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+function sendMarker () { //(atPose) {
+	var markerTopic = new ROSLIB.Topic({
+			ros : ros,
+			name : "/visualization_marker",
+			messageType : "visualization_msgs/Marker" 
 		});
-			
+
+	var marker = new ROSLIB.Message({
+		header: {
+			frame_id : "base_link",			// or just ""?
+			stamp : {}			
+		},
+		ns: "Commander",
+		id: 0,
+		type: 2,		//visualization_msgs::Marker::SPHERE,
+		action: 0,		//visualization_msgs::Marker::ADD,
+		pose: {
+			position: {
+			x : 1,
+				y : 1,
+				z : 1
+			},
+			orientation: {
+				x : 0.0,
+				y : 0.0,
+				z : 0.0,
+				w : 1.0
+			}
+		},
+		scale: {
+			x : 0.2,
+			y : 0.2,
+			z : 0.2
+		},
+		color: {
+			a : 1.0, // Don't forget to set the alpha!
+			r : 1.0,
+			g : 1.0,
+			b : 0.0
+		}
+		//text: "Waypoint";
+		//only if using a MESH_RESOURCE marker type:
+		//marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+	});
+		
 	//marker.pose = atPose;
 	if (connected) {
 		console.log ('Sending marker: ' + JSON.stringify(marker));
@@ -1461,68 +1460,68 @@ function slowerBot () {
 	} else {
 		say ("You need to be connected");
 	}
-	}		
+}		
 		
-	function findObject (whatToFind) {			// find an object by looking around
-		var findObj = new ROSLIB.Service({
-			ros : ros,
-			name : "/rotate",
-			serviceType : "dnn_rotate/StringTrigger"
-		});
-	 
-		var lookfor = new ROSLIB.ServiceRequest ({
-			object : "nothing"
-		  });
+function findObject (whatToFind) {			// find an object by looking around
+	var findObj = new ROSLIB.Service({
+		ros : ros,
+		name : "/rotate",
+		serviceType : "dnn_rotate/StringTrigger"
+	});
+ 
+	var lookfor = new ROSLIB.ServiceRequest ({
+		object : "nothing"
+	  });
 
-		lookfor.object = whatToFind;
-		findObj.callService(lookfor, function (result) {
-			console.log('Result for service call to find object '
-			  + lookfor.object
-			  + ': '
-			  + result.response);
-			say (result.response);
-		  });
-	}				
+	lookfor.object = whatToFind;
+	findObj.callService(lookfor, function (result) {
+		console.log('Result for service call to find object '
+		  + lookfor.object
+		  + ': '
+		  + result.response);
+		say (result.response);
+	  });
+}				
 		
-	function paramdump () {
-		console.log ("sending paramdump message");
-		var dumpTopic = new ROSLIB.Topic({
-			ros : ros,
-			name : '/paramdump',
-			messageType : 'std_msgs/String'
-		});
-		var pdumpMsg = new ROSLIB.Message({
-			data: 'dump waypoints'
-		});
-		dumpTopic.publish (pdumpMsg);
-	}
+function paramdump () {
+	console.log ("sending paramdump message");
+	var dumpTopic = new ROSLIB.Topic({
+		ros : ros,
+		name : '/paramdump',
+		messageType : 'std_msgs/String'
+	});
+	var pdumpMsg = new ROSLIB.Message({
+		data: 'dump waypoints'
+	});
+	dumpTopic.publish (pdumpMsg);
+}
 	
-	function testButton () {
-		sendMarker ();
-	}
+function testButton () {
+	sendMarker ();
+}
 	
-	function getBattery (batVolts, batfail) {  // returns answer as sentence
-		if (connected) {
+function getBattery (batVolts, batfail) {  // returns answer as sentence
+	if (connected) {
 
-			var batTopic = new ROSLIB.Topic({
-				ros         : ros,
-				name        : '/battery_state',
-				messageType : 'sensor_msgs/BatteryState' 
-			});
-		  
-			batTopic.subscribe (function (message) {
-				var shortvolts = myNamespace.round (message.voltage, 2); 
-				var percentage = 100 * myNamespace.round (message.percentage, 2);
-				batTopic.unsubscribe();  
-				console.log ("Battery voltage: " + shortvolts + " volts, " + percentage + "%");
-				batVolts (percentage);
-				//("The battery voltage is " + shortvolts + " volts");
-			});
-		
-		} else {
-			batfail ("You need to be connected");
-		}
+		var batTopic = new ROSLIB.Topic({
+			ros         : ros,
+			name        : '/battery_state',
+			messageType : 'sensor_msgs/BatteryState' 
+		});
+	  
+		batTopic.subscribe (function (message) {
+			var shortvolts = myNamespace.round (message.voltage, 2); 
+			var percentage = 100 * myNamespace.round (message.percentage, 2);
+			batTopic.unsubscribe();  
+			console.log ("Battery voltage: " + shortvolts + " volts, " + percentage + "%");
+			batVolts (percentage);
+			//("The battery voltage is " + shortvolts + " volts");
+		});
+	
+	} else {
+		batfail ("You need to be connected");
 	}
+}
 
  /*		
 	function getOdometry (callbackPosition) {	

@@ -1,0 +1,36 @@
+Internal test: manage up to 100 testers
+
+You can create a list of internal testers by email address. An internal test can have up to 100 testers per app.
+
+When setting up an internal test, keep the following in mind:
+
+    Country distribution: You can add users from any location to your internal test. If an internal tester is located in a country where your app's production, alpha, or beta version isn't available, the user will still receive the internal test APK.
+    Payment: For paid apps, testers can install your internal test version for free. Testers need to pay for in-app purchases, unless they're also added to a license testers list.
+    Device exclusion rules: Device exclusion rules don't apply to internal testers.
+    Policy and security reviews: Internal tests may not be subject to the usual Play policy or security reviews.
+
+Start an internal test
+
+ Create testers list
+
+If you've already created your testers list, skip to the "add testers" instructions.
+
+    Sign in to your Play Console.
+    On the left menu, select Settings Settings gear > Manage testers > Create list.
+    Type a name to identify your list of testers.
+    Add email addresses separated by commas or click Upload CSV. If you use a .CSV file, put each email address on its own line without any commas. If you upload a .CSV file, it will overwrite any email addresses you've added.
+    Click Create list.
+
+Add testers
+
+    Sign in to your Play Console.
+    Select an app.
+    On the left menu, select Release management > App releases.
+    Next to the internal test track, select Manage internal test.
+    Expand the "Manage testers" section. If the "Manage testers" section is empty, make sure you've uploaded an APK to the internal test track.
+    Next to "Choose a testing method," select Internal test.
+    In the "Users" section, check the box next to list you want to use.
+    Copy the "Opt-in URL" to share with your testers.
+		https://play.google.com/apps/internaltest/4700511024486688809
+    Next to "Feedback channel," add an email address or URL to collect feedback from testers. Your app's feedback channel will be shown to users on your tester opt-in page.
+    Click Save.
