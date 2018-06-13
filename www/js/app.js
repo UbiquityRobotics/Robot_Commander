@@ -1400,12 +1400,12 @@ function stopRobot () {
 
 function fasterBot () {
 	speedFactor *= 1.5;
-	addLog ("Speed factor is " + myNamespace.round (speedFactor, 2);
+	addLog ("Speed factor is " + myNamespace.round (speedFactor, 2));
 }
 
 function slowerBot () {
 	speedFactor /= 1.5;
-	addLog ("Speed factor is " + myNamespace.round (speedFactor, 2);
+	addLog ("Speed factor is " + myNamespace.round (speedFactor, 2));
 }
 	
 function sendMarker () { //(atPose) {
